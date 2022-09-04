@@ -24,25 +24,52 @@ from bpy.props import (IntProperty, BoolProperty, CollectionProperty)
 # Python modules:
 import os
 import sys
+import shutil
 import tempfile
 import importlib
 import subprocess
 from collections import namedtuple
 
+
+# ======== Helper functions ======== #
+
 # Declare all modules that this add-on depends on, that may need to be installed. The package and (global) name can be
 # set to None, if they are equal to the module name. See import_module and ensure_and_import_module for the explanation
 # of the arguments. DO NOT use this to import other parts of this Python add-on, import them as usual with an
 # "import" statement.
-dependencies_list = [
-        "diffusers",
-        "gdown",
-]
-
-# ======== Helper functions ======== #
-
 Dependency = namedtuple("Dependency", ["module", "package", "name"])
-dependencies = (Dependency(module=i, package=None, name=None) for i in dependencies_list)
+dependencies = (
+    Dependency(module="diffusers", package=None, name=None),
+    Dependency(module="gdown", package=None, name=None),
+    Dependency(module="torch", package=None, name=None),
+)
+
 dependencies_installed = False
+
+
+def import_stable_diffusion():
+    """
+    Imports Stable Diffusion from the following link:
+    https://drive.google.com/drive/folders/1e77rFcVUlEH7G5RhQDwtGwdUOiG0EdJc
+
+    Currently, the weights for SD are stored on This Cozy Studio Inc.'s Google Drive, and thus the module 'gdown' is
+    needed to download the large file.
+    :return:
+    """
+    import gdown
+
+    sd_url = "https://drive.google.com/drive/folders/1e77rFcVUlEH7G5RhQDwtGwdUOiG0EdJc"
+    sd_path = os.path.realpath(os.path.join("..", "stable-diffusion-v1-4"))
+
+    if os.path.exists(sd_path):
+        shutil.rmtree(sd_path)
+
+    gdown.download_folder(
+            sd_url,
+            quiet=False,
+            output=sd_path,
+            use_cookies=False
+    )
 
 
 def import_module(module_name, global_name=None, reload=True):
@@ -266,8 +293,54 @@ class CAT_PT_Main(bpy.types.Panel):
                 layout.label(text=f"{dependency.module}")
 
 
-# ======== Pre Dependency Classes ======== #
+# ======== Pre-Dependency Operators ======== #
+class CATPRE_OT_install_dependencies(bpy.types.Operator):
+    bl_idname = "cat.install_dependencies"
+    bl_label = "Install dependencies"
+    bl_description = (
+            "Downloads and installs the required python packages for this add-on. "
+            "Internet connection is required. Blender may have to be started with "
+            "elevated permissions in order to install the package."
+    )
+    bl_options = {"REGISTER", "INTERNAL"}
 
+    @classmethod
+    def poll(self, context):
+        # Deactivate when dependencies have been installed
+        return not dependencies_installed
+
+    def execute(self, context):
+        # Importing dependencies
+        try:
+            install_pip()
+            for dependency in dependencies:
+                install_and_import_module(module_name=dependency.module,
+                                          package_name=dependency.package,
+                                          global_name=dependency.name)
+        except (subprocess.CalledProcessError, ImportError) as err:
+            self.report({"ERROR"}, str(err))
+            return {"CANCELLED"}
+
+        # # Importing Stable Diffusion
+        # try:
+        #     import_stable_diffusion()
+        # except Exception as err:
+        #     self.report({"ERROR"}, str(err))
+        #     return {"CANCELLED"}
+
+        global dependencies_installed
+        dependencies_installed = True
+
+        # Register the panels, operators, etc. since dependencies are installed
+        for cls in classes:
+            bpy.utils.register_class(cls)
+
+        bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
+
+        return {"FINISHED"}
+
+
+# ======== Pre-Dependency UI Panels ======== #
 class CATPRE_PT_warning_panel(bpy.types.Panel):
     bl_label = "Cozy Auto Texture Warning"
     bl_category = "Cozy Auto Texture"
@@ -300,42 +373,6 @@ class CATPRE_PT_warning_panel(bpy.types.Panel):
 
         for line in lines:
             layout.label(text=line)
-
-
-class CATPRE_OT_install_dependencies(bpy.types.Operator):
-    bl_idname = "cat.install_dependencies"
-    bl_label = "Install dependencies"
-    bl_description = (
-            "Downloads and installs the required python packages for this add-on. "
-            "Internet connection is required. Blender may have to be started with "
-            "elevated permissions in order to install the package."
-    )
-    bl_options = {"REGISTER", "INTERNAL"}
-
-    @classmethod
-    def poll(self, context):
-        # Deactivate when dependencies have been installed
-        return not dependencies_installed
-
-    def execute(self, context):
-        try:
-            install_pip()
-            for dependency in dependencies:
-                install_and_import_module(module_name=dependency.module,
-                                          package_name=dependency.package,
-                                          global_name=dependency.name)
-        except (subprocess.CalledProcessError, ImportError) as err:
-            self.report({"ERROR"}, str(err))
-            return {"CANCELLED"}
-
-        global dependencies_installed
-        dependencies_installed = True
-
-        # Register the panels, operators, etc. since dependencies are installed
-        for cls in classes:
-            bpy.utils.register_class(cls)
-
-        return {"FINISHED"}
 
 
 class CATPRE_preferences(bpy.types.AddonPreferences):
@@ -376,14 +413,13 @@ def register():
         for dependency in dependencies:
             import_module(module_name=dependency.module, global_name=dependency.name)
         dependencies_installed = True
+
     except ModuleNotFoundError:
         # Don't register other panels, operators etc.
         return
 
     for cls in classes:
         bpy.utils.register_class(cls)
-
-    bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
 
 
 def unregister():
