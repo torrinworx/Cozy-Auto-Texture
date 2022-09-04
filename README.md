@@ -5,7 +5,6 @@ The purpose of this repository is to be the begining of a Blender add-on that au
 
 Stable Diffusion and the weights that are used (`stable-diffusion-v1-4`) are to large to store on GitHub effectively. For the purposes of this repository they are stored and retreived from this: https://drive.google.com/drive/folders/1e77rFcVUlEH7G5RhQDwtGwdUOiG0EdJc?usp=sharing
 
-This folder will automatically be downloaded into the directory Blender is installed, typically: `C:\Program Files\Blender Foundation\Blender 3.2\3.2\scripts\addons\Cozy-Auto-Texture`
+Cozy Auto Texture will automatically download the wieghts at the above link when you install the dependencies in `Edit > Preferences > Add-ons` by clicking on the `Install dependencies` button.
 
-Steps to setup Stable Diffusion:
-#1.
+This folder will automatically be downloaded into the directory Blender is installed, typically: `C:\Program Files\Blender Foundation\Blender 3.2\3.2\scripts\addons\Cozy-Auto-Texture`
