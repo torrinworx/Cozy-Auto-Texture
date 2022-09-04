@@ -29,16 +29,19 @@ import importlib
 import subprocess
 from collections import namedtuple
 
+# Declare all modules that this add-on depends on, that may need to be installed. The package and (global) name can be
+# set to None, if they are equal to the module name. See import_module and ensure_and_import_module for the explanation
+# of the arguments. DO NOT use this to import other parts of this Python add-on, import them as usual with an
+# "import" statement.
+dependencies_list = [
+        "diffusers",
+        "gdown",
+]
+
 # ======== Helper functions ======== #
 
 Dependency = namedtuple("Dependency", ["module", "package", "name"])
-
-# Declare all modules that this add-on depends on, that may need to be installed. The package and (global) name can be
-# set to None, if they are equal to the module name. See import_module and ensure_and_import_module for the explanation
-# of the arguments. DO NOT use this to import other parts of your Python add-on, import them as usual with an
-# "import" statement.
-dependencies = (Dependency(module="matplotlib", package=None, name=None),)
-
+dependencies = (Dependency(module=i, package=None, name=None) for i in dependencies_list)
 dependencies_installed = False
 
 
@@ -57,7 +60,7 @@ def import_module(module_name, global_name=None, reload=True):
     if global_name in globals():
         importlib.reload(globals()[global_name])
     else:
-        # Attempt to import the module and assign it to globals dictionary. This allow to access the module under
+        # Attempt to import the module and assign it to globals dictionary. This allows access the module under
         # the given name, just like the regular import would.
         globals()[global_name] = importlib.import_module(module_name)
 
