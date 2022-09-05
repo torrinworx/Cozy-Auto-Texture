@@ -1,8 +1,16 @@
+import bpy
+
 import os
 from torch import autocast
 from diffusers import StableDiffusionPipeline
 
-model_path = os.path.relpath(os.path.join("..", "stable-diffusion-v1-4"))
+model_path = os.path.join(
+        bpy.utils.resource_path("LOCAL"),
+        "scripts",
+        "addons",
+        "Cozy-Auto-Texture",
+        "stable-diffusion-v1-4"
+)
 
 
 def uniquify(path):
@@ -35,7 +43,7 @@ def text2img(user_input):
     # TODO: allow user to specify CPU or GPU (cuda) render method for images.
     # device = user_input.device
     device = "cuda"
-
+    
     pipe = StableDiffusionPipeline.from_pretrained(model_path)  # Specify model path
     pipe = pipe.to(device)  # Specify render device
 
