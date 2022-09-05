@@ -169,24 +169,29 @@ class CAT_PGT_Input_Properties(bpy.types.PropertyGroup):
 
     texture_name: bpy.props.StringProperty(name="Texture Name")
 
-    texture_description: bpy.props.StringProperty(name="Texture Description")
+    texture_prompt: bpy.props.StringProperty(name="Texture Prompt")
 
-    number_o_textures: bpy.props.IntProperty(
-            name="Number of Textures to Generate",
-            default=1,
-            min=1
+    # number_o_textures: bpy.props.IntProperty(
+    #         name="Number of Textures",
+    #         default=1,
+    #         min=1
+    # )
+
+    texture_format: bpy.props.EnumProperty(
+        name="Texture Format",
+        description="Select texture file format",
+        items=[
+            ('.png', '.png', 'Export texture as .png'),
+            ('.jpg', '.jpg', 'Export texture as .jpg'),
+        ]
     )
 
     save_path: bpy.props.StringProperty(
         name="Save Path",
         description="Save path for NFT files",
-        default="",
+        default="/tmp\\",
         maxlen=1024,
         subtype="DIR_PATH"
-    )
-
-    test_bool: bpy.props.BoolProperty(
-            name="Enable something"
     )
 
 
@@ -205,15 +210,14 @@ class CreateTextures(bpy.types.Operator):
 
         class UserInput:
             texture_name = bpy.context.scene.input_tool.texture_name
-            texture_description = bpy.context.scene.input_tool.texture_description
-            number_o_textures = bpy.context.scene.input_tool.number_o_textures
+            texture_prompt = bpy.context.scene.input_tool.texture_prompt
+            texture_format = bpy.context.scene.input_tool.texture_format
 
             save_path = bpy.path.abspath(bpy.context.scene.input_tool.save_path)
-            sd_repo_path = bpy.path.abspath(bpy.context.scene.input_tool.sd_repo_path)
-
-            test_bool = bpy.context.scene.input_tool.text_bool
 
         if not UserInput.save_path:
+            UserInput.save_path = tempfile.gettempdir()
+        if UserInput.save_path == "/tmp\\":
             UserInput.save_path = tempfile.gettempdir()
 
         from src.main import text2img  # Imported here to account for pre-dependency.
@@ -248,13 +252,13 @@ class CAT_PT_Main(bpy.types.Panel):
         row.prop(input_tool, "texture_name")
 
         row = layout.row()
-        row.prop(input_tool, "texture_description")
+        row.prop(input_tool, "texture_prompt")
 
         row = layout.row()
         row.label(text="*Input text for Stable Diffusion model.")
 
         row = layout.row()
-        row.prop(input_tool, "number_o_textures")
+        row.prop(input_tool, "texture_format")
 
         layout.separator()
 

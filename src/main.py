@@ -27,9 +27,10 @@ def text2img(user_input):
     Main function to control Blender/Stable Diffusion text to image bridge.
     :return:
     """
+    texture_name = user_input.texture_name
+    texture_prompt = user_input.texture_prompt
     save_path = user_input.save_path
-    prompt = user_input.prompt
-    image_format = user_input.image_name
+    texture_format = user_input.texture_format
 
     # TODO: allow user to specify CPU or GPU (cuda) render method for images.
     # device = user_input.device
@@ -39,8 +40,8 @@ def text2img(user_input):
     pipe = pipe.to(device)  # Specify render device
 
     with autocast("cuda"):
-        image = pipe(prompt)["sample"][0]
+        image = pipe(texture_prompt)["sample"][0]
 
-    image_path = uniquify(os.path.join(save_path, prompt) + image_format)  # Path to image
+    image_path = uniquify(os.path.join(save_path, texture_name) + texture_format)  # Path to image
 
     image.save(image_path)
