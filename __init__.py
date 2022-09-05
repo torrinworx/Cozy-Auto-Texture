@@ -267,19 +267,32 @@ class CAT_PT_Main(bpy.types.Panel):
 
         layout.separator()
 
+
+class CAT_PT_Help(bpy.types.Panel):
+    bl_label = "Help"
+    bl_idname = "CAT_PT_Help"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Cozy Auto Texture'
+
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        input_tool = scene.input_tool
+
         row = layout.row()
         row.label(text=f"Looking for help?")
 
         row = layout.row()
         row.operator("wm.url_open", text="Cozy Auto Texture Documentation",
-                icon='URL').url = "https://github.com/torrinworx/Blend_My_NFTs"
+                icon='URL').url = "https://github.com/torrinworx/Cozy-Auto-Texture"
 
         row = layout.row()
         row.operator(
                 "wm.url_open",
                 text="YouTube Tutorials",
                 icon='URL'
-        ).url = "https://www.youtube.com/watch?v=ygKJYz4BjRs&list=PLuVvzaanutXcYtWmPVKu2bx83EYNxLRsX"
+        ).url = "https://www.youtube.com/c/ThisCozyStudio"
 
         row = layout.row()
         row.operator("wm.url_open", text="Join Our Discord Community!",
@@ -288,6 +301,7 @@ class CAT_PT_Main(bpy.types.Panel):
         row = layout.row()
         layout.label(text=f"{CAT_version}, {LAST_UPDATED}")
 
+        layout.label(text="Installed Dependencies:")
         for dependency in dependencies:
             if dependency.name is None and hasattr(globals()[dependency.module], "__version__"):
                 layout.label(text=f"{dependency.module} {globals()[dependency.module].__version__}")
@@ -295,6 +309,8 @@ class CAT_PT_Main(bpy.types.Panel):
                 layout.label(text=f"{dependency.module} {globals()[dependency.name].__version__}")
             else:
                 layout.label(text=f"{dependency.module}")
+            if os.path.exists(os.path.relpath("stable-diffusion-v1-4")):
+                layout.label(text="stable-diffusion-v1-4")
 
 
 # ======== Pre-Dependency Operators ======== #
@@ -397,6 +413,7 @@ classes = (
 
         # Panel Classes:
         CAT_PT_Main,
+        CAT_PT_Help,
 )
 
 pre_dependency_classes = (
