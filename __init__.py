@@ -76,7 +76,15 @@ def import_stable_diffusion():
     import gdown
 
     sd_url = "https://drive.google.com/drive/folders/1e77rFcVUlEH7G5RhQDwtGwdUOiG0EdJc"
-    sd_path = os.path.realpath(os.path.join("..", "stable-diffusion-v1-4"))
+    sd_path = os.path.join(
+            bpy.utils.resource_path("LOCAL"),
+            "scripts",
+            "addons",
+            "Cozy-Auto-Texture",
+            "stable-diffusion-v1-4"
+    )
+
+    print(f"Saving to =========== {sd_path}")
 
     if os.path.exists(sd_path):
         shutil.rmtree(sd_path)
@@ -459,7 +467,8 @@ def unregister():
         for cls in reversed(classes):
             bpy.utils.unregister_class(cls)
 
-    del bpy.types.Scene.input_tool
+    if dependencies_installed:
+        del bpy.types.Scene.input_tool
 
 
 if __name__ == '__main__':
