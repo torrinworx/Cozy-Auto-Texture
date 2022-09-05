@@ -56,6 +56,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 Dependency = namedtuple("Dependency", ["module", "package", "name"])
 dependencies = (
     Dependency(module="diffusers", package=None, name=None),
+    Dependency(module="transformers", package=None, name=None),
     Dependency(module="gdown", package=None, name=None),
     Dependency(module="torch", package=None, name=None),
 )

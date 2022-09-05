@@ -38,6 +38,7 @@ def remove_dependencies(module_name_list):
 remove_dependencies(
     [
         "diffusers",
+        "transformers",
         "gdown",
         "torch"
     ]
