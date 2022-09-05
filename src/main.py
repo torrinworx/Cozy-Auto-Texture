@@ -45,3 +45,4 @@ def text2img(user_input):
     image_path = uniquify(os.path.join(save_path, texture_name) + texture_format)  # Path to image
 
     image.save(image_path)
+

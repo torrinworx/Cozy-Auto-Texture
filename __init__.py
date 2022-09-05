@@ -345,12 +345,12 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
             self.report({"ERROR"}, str(err))
             return {"CANCELLED"}
 
-        # # Importing Stable Diffusion
-        # try:
-        #     import_stable_diffusion()
-        # except Exception as err:
-        #     self.report({"ERROR"}, str(err))
-        #     return {"CANCELLED"}
+        # Importing Stable Diffusion
+        try:
+            import_stable_diffusion()
+        except Exception as err:
+            self.report({"ERROR"}, str(err))
+            return {"CANCELLED"}
 
         global dependencies_installed
         dependencies_installed = True
