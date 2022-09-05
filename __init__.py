@@ -425,6 +425,9 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
+    if dependencies_installed:
+        bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
+
 
 def unregister():
     for cls in pre_dependency_classes:
