@@ -2,16 +2,14 @@ import os
 import sys
 import subprocess
 
+# NOTE: Removing dependencies, restarting the add-on with CTRL+R results in errors. Restart Blender after running this
+# to get a clean user install experience.
 
-def remove_dependencies(module_name_list, package_name=None, global_name=None):
+
+def remove_dependencies(module_name_list):
     """
     Installs the package through pip and attempts to import the installed module.
-    :param module_name_list: Module to import.
-    :param package_name: (Optional) Name of the package that needs to be installed. If None it is assumed to be equal
-       to the module_name.
-    :param global_name: (Optional) Name under which the module is imported. If None the module_name will be used.
-       This allows to import under a different name with the same effect as e.g. "import numpy as np" where "np" is
-       the global_name under which the module can be accessed.
+    :param: module_name_list: Module to import.
     :raises: subprocess.CalledProcessError and ImportError
     """
     for module_name in module_name_list:
@@ -35,6 +33,7 @@ def remove_dependencies(module_name_list, package_name=None, global_name=None):
 
         print(f"PACKAGE TO UNINSTALL: {module_name}")
         subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", module_name], check=True, env=environ_copy)
+
 
 remove_dependencies(
     [

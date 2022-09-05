@@ -31,6 +31,22 @@ import subprocess
 from collections import namedtuple
 
 
+# Local modules:
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+
+# from .src import
+#
+# # Refresh Locals for development:
+# if "bpy" in locals():
+#     modules = {
+#         "example": example,
+#     }
+#
+#     for i in modules:
+#         if i in locals():
+#             importlib.reload(modules[i])
+
+
 # ======== Helper functions ======== #
 
 # Declare all modules that this add-on depends on, that may need to be installed. The package and (global) name can be
@@ -87,7 +103,7 @@ def import_module(module_name, global_name=None, reload=True):
     if global_name in globals():
         importlib.reload(globals()[global_name])
     else:
-        # Attempt to import the module and assign it to globals dictionary. This allows access the module under
+        # Attempt to import the module and assign it to globals dictionary. This allow to access the module under
         # the given name, just like the regular import would.
         globals()[global_name] = importlib.import_module(module_name)
 
@@ -147,13 +163,6 @@ def install_and_import_module(module_name, package_name=None, global_name=None):
     import_module(module_name, global_name)
 
 
-def text2img(user_input):
-    """
-    Main function to control Blender/Stable Diffusion bridge.
-    :return:
-    """
-
-
 # ======== User input Property Group ======== #
 class CAT_PGT_Input_Properties(bpy.types.PropertyGroup):
     # Create NFT Data Panel:
@@ -171,14 +180,6 @@ class CAT_PGT_Input_Properties(bpy.types.PropertyGroup):
     save_path: bpy.props.StringProperty(
         name="Save Path",
         description="Save path for NFT files",
-        default="",
-        maxlen=1024,
-        subtype="DIR_PATH"
-    )
-
-    sd_repo_path: bpy.props.StringProperty(
-        name="Stable Diffusion Path",
-        description="The installation directory for Stable Diffusion",
         default="",
         maxlen=1024,
         subtype="DIR_PATH"
@@ -215,9 +216,11 @@ class CreateTextures(bpy.types.Operator):
         if not UserInput.save_path:
             UserInput.save_path = tempfile.gettempdir()
 
+        from src.main import text2img  # Imported here to account for pre-dependency.
+
         text2img(UserInput)
 
-        self.report({'INFO'}, f"NFT Data created!")
+        self.report({'INFO'}, f"Texture(s) Created!")
         return {"FINISHED"}
 
     def invoke(self, context, event):
@@ -248,18 +251,19 @@ class CAT_PT_Main(bpy.types.Panel):
         row.prop(input_tool, "texture_description")
 
         row = layout.row()
-        row.prop(input_tool, "number_o_textures")
+        row.label(text="*Input text for Stable Diffusion model.")
 
         row = layout.row()
-        row.label(text="*Input text for Stable Diffusion model.")
+        row.prop(input_tool, "number_o_textures")
+
+        layout.separator()
 
         row = layout.row()
         row.prop(input_tool, "save_path")
 
         layout.separator()
 
-        row = layout.row()
-        row.prop(input_tool, "sd_repo_path")
+        self.layout.operator("cat.create_textures", icon='DISCLOSURE_TRI_RIGHT', text="Create Textures")
 
         layout.separator()
 
