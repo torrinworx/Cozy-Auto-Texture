@@ -59,6 +59,7 @@ dependencies = (
     Dependency(module="transformers", package=None, name=None),
     Dependency(module="gdown", package=None, name=None),
     Dependency(module="torch", package=None, name=None),
+    Dependency(module="numpy", package=None, name=None),
 )
 
 dependencies_installed = False
