@@ -55,10 +55,10 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 # "import" statement.
 Dependency = namedtuple("Dependency", ["module", "package", "name"])
 dependencies = (
+    Dependency(module="torch", package=None, name=None),
     Dependency(module="diffusers", package=None, name=None),
     Dependency(module="transformers", package=None, name=None),
     Dependency(module="gdown", package=None, name=None),
-    Dependency(module="torch", package=None, name=None),
 )
 
 dependencies_installed = False
@@ -180,12 +180,6 @@ class CAT_PGT_Input_Properties(bpy.types.PropertyGroup):
 
     texture_prompt: bpy.props.StringProperty(name="Texture Prompt")
 
-    # number_o_textures: bpy.props.IntProperty(
-    #         name="Number of Textures",
-    #         default=1,
-    #         min=1
-    # )
-
     texture_format: bpy.props.EnumProperty(
         name="Texture Format",
         description="Select texture file format",
@@ -201,6 +195,24 @@ class CAT_PGT_Input_Properties(bpy.types.PropertyGroup):
         default="/tmp\\",
         maxlen=1024,
         subtype="DIR_PATH"
+    )
+
+
+class CAT_PGT_Input_Properties_Pre(bpy.types.PropertyGroup):
+    # Install Dependencies panel:
+    venv_path: bpy.props.StringProperty(
+            name="Environment Path",
+            description="The save path for the needed modules and the Stable Diffusion weights. If you have already "
+                        "installed Cozy Auto Texture, or you are using a different version of Blender, you can use your"
+                        " old Environment Path. Regardless of the method, always initiate your Environment.",
+            default="/tmp\\",
+            maxlen=1024,
+            subtype="DIR_PATH"
+    )
+
+    agree_to_license: bpy.props.BoolProperty(
+            name="I agree",
+            description="I agree to the Cozy Auto Texture License and the Hugging Face Stable Diffusion License."
     )
 
 
@@ -276,7 +288,7 @@ class CAT_PT_Main(bpy.types.Panel):
 
         layout.separator()
 
-        self.layout.operator("cat.create_textures", icon='DISCLOSURE_TRI_RIGHT', text="Create Textures")
+        layout.operator("cat.create_textures", icon='DISCLOSURE_TRI_RIGHT', text="Create Textures")
 
         layout.separator()
 
@@ -393,17 +405,8 @@ class CATPRE_PT_warning_panel(bpy.types.Panel):
                  f"4. Under \"Preferences\" click on the \"{CATPRE_OT_install_dependencies.bl_label}\"",
                  f"   button. This will download and install the missing Python packages,",
                  f"   if Blender has the required permissions. If you are experiencing issues,",
-                 f"   re-open Blender with Administrator privileges.",
-                 f"",
-                 f"   If you're attempting to run the add-on from the text editor, ",
-                 f"   you won't see the options described above. Please install the ",
-                 f"   add-on properly through the preferences.",
-                 f"",
-                 f"1. Open the add-on preferences (Edit > Preferences > Add-ons).",
-                 f"2. Press the \"Install\" button.",
-                 f"3. Search for the add-on file.",
-                 f"4. Confirm the selection by pressing the \"Install Add-on\" button in the file browser."]
-
+                 f"   re-open Blender with Administrator privileges."
+        ]
         for line in lines:
             layout.label(text=line)
 
@@ -413,7 +416,53 @@ class CATPRE_preferences(bpy.types.AddonPreferences):
 
     def draw(self, context):
         layout = self.layout
-        layout.operator(CATPRE_OT_install_dependencies.bl_idname, icon="CONSOLE")
+        scene = context.scene
+        input_tool_pre = scene.input_tool_pre
+
+        row = layout.row()
+        row.prop(input_tool_pre, "venv_path")
+
+        # Hugging Face and Cozy Auto Texture License agreement:
+
+        # This line represents the character space readable in Blender's UI system:
+        #         |=======================================================================|
+        lines = [
+                f"Please read the two following License Agreement. You must accept the terms ",
+                f"of the License Agreement before continuing with the installation.",
+        ]
+
+        for line in lines:
+            layout.alignment = 'CENTER'
+            layout.label(text=line)
+
+        row = layout.row()
+        row.operator(
+                "wm.url_open", text="Stable Diffusion License",
+                icon='HELP'
+        ).url = "https://huggingface.co/spaces/CompVis/stable-diffusion-license"
+
+        row = layout.row()
+        row.operator(
+                "wm.url_open", text="Cozy Auto Texture License",
+                icon='HELP'
+        ).url = "https://github.com/torrinworx/Cozy-Auto-Texture/blob/main/LICENSE"
+
+        row_agree_to_license = layout.row()
+        row_agree_to_license.alignment = 'CENTER'
+        row_agree_to_license.prop(input_tool_pre, "agree_to_license")
+
+        layout.separator()
+
+        row_install_dependencies_button = layout.row()
+        row_install_dependencies_button.operator(CATPRE_OT_install_dependencies.bl_idname, icon="CONSOLE")
+
+        if not bpy.context.scene.input_tool_pre.agree_to_license:
+            row_install_dependencies_button.enabled = False
+        else:
+            row_install_dependencies_button.enabled = True
+
+        if dependencies_installed and bpy.context.scene.input_tool_pre.agree_to_license:
+            row_agree_to_license.enabled = False
 
 
 # ======== Blender add-on register/unregister handling ======== #
@@ -430,9 +479,15 @@ classes = (
 )
 
 pre_dependency_classes = (
-        CATPRE_PT_warning_panel,
+        # Property Group Classes:
+        CAT_PGT_Input_Properties_Pre,
+
+        # Operator Classes:
         CATPRE_OT_install_dependencies,
-        CATPRE_preferences
+
+        # Panel Classes
+        CATPRE_preferences,
+        CATPRE_PT_warning_panel,
 )
 
 
@@ -443,19 +498,19 @@ def register():
     for cls in pre_dependency_classes:
         bpy.utils.register_class(cls)
 
+    bpy.types.Scene.input_tool_pre = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties_Pre)
+
     try:
         for dependency in dependencies:
             import_module(module_name=dependency.module, global_name=dependency.name)
         dependencies_installed = True
-
     except ModuleNotFoundError:
-        # Don't register other panels, operators etc.
-        return
+        return  # Don't register other panels, operators etc.
 
-    for cls in classes:
-        bpy.utils.register_class(cls)
+    else:  # If modules successfully registered:
+        for cls in classes:
+            bpy.utils.register_class(cls)
 
-    if dependencies_installed:
         bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
 
 
@@ -467,8 +522,8 @@ def unregister():
         for cls in reversed(classes):
             bpy.utils.unregister_class(cls)
 
-    if dependencies_installed:
-        del bpy.types.Scene.input_tool
+    del bpy.types.Scene.input_tool_pre
+    del bpy.types.Scene.input_tool
 
 
 if __name__ == '__main__':
