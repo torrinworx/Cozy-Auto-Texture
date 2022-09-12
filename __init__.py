@@ -25,6 +25,8 @@ from bpy.props import (IntProperty, BoolProperty, CollectionProperty)
 import os
 import sys
 import shutil
+import pathlib
+import platform
 import tempfile
 import importlib
 import subprocess
@@ -33,6 +35,13 @@ from collections import namedtuple
 
 # Local modules:
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+# Paths:
+current_drive = os.path.join(pathlib.Path.home().drive, os.sep)
+
+environment_path = os.path.join(current_drive, "Cozy-Auto-Texture-Files")
+venv_path = os.path.join(environment_path, "venv")
+sd_path = os.path.join(environment_path, "stable-diffusion-v1-4")
+
 
 # from .src import
 #
@@ -53,48 +62,57 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 # set to None, if they are equal to the module name. See import_module and ensure_and_import_module for the explanation
 # of the arguments. DO NOT use this to import other parts of this Python add-on, import them as usual with an
 # "import" statement.
+
+dependence_list = [
+        "torch",
+        "diffusers",
+        "transformers",
+        "cloudpathlib",
+        "numpy"
+]
+
 Dependency = namedtuple("Dependency", ["module", "package", "name"])
-dependencies = (
-    Dependency(module="torch", package=None, name=None),
-    Dependency(module="diffusers", package=None, name=None),
-    Dependency(module="transformers", package=None, name=None),
-    Dependency(module="gdown", package=None, name=None),
-)
+dependencies = (Dependency(module=i, package=None, name=None) for i in dependence_list)
 
 dependencies_installed = False
 
+# Stable Diffusion weights URL:
+sd_url = "s3://cozy-auto-texture-sd-repo/stable-diffusion-v1-4/"
 
-def import_stable_diffusion():
+# Current size of final Environment folder including weights and dependencies:
+# TODO: Make this number dynamic based on the 'sd_url' and dependencies size.
+env_size = 6e+9  # 8GB
+buffer = 1e+9  # 1GB
+
+
+def check_drive_space(path: str = os.getcwd()):
     """
-    Imports Stable Diffusion from the following link:
-    https://drive.google.com/drive/folders/1e77rFcVUlEH7G5RhQDwtGwdUOiG0EdJc
+    Checks current drive if it has enough available space to store the Environment and Stable Diffusion weights.
 
-    Currently, the weights for SD are stored on This Cozy Studio Inc.'s Google Drive, and thus the module 'gdown' is
-    needed to download the large file.
-    :return:
+    returns True if enough space exists in drive, and False if installs will go over drive space.
     """
-    import gdown
 
-    sd_url = "https://drive.google.com/drive/folders/1e77rFcVUlEH7G5RhQDwtGwdUOiG0EdJc"
-    sd_path = os.path.join(
-            bpy.utils.resource_path("LOCAL"),
-            "scripts",
-            "addons",
-            "Cozy-Auto-Texture",
-            "stable-diffusion-v1-4"
-    )
+    total, used, free = shutil.disk_usage(path)
 
-    print(f"Saving to =========== {sd_path}")
+    if free > (env_size + buffer):
+        return True
+    else:
+        return False
 
-    if os.path.exists(sd_path):
-        shutil.rmtree(sd_path)
 
-    gdown.download_folder(
-            sd_url,
-            quiet=False,
-            output=sd_path,
-            use_cookies=False
-    )
+def import_stable_diffusion(sd_path):
+    """
+    Imports Stable Diffusion from the 'sd_url' using the 'cloudpathlib' library.
+    """
+
+    from cloudpathlib import CloudPath
+
+    cloud_path = CloudPath(sd_url)
+
+    if not os.path.exists(sd_path):
+        # shutil.rmtree(sd_path)
+        os.makedirs(sd_path)
+        cloud_path.download_to(sd_path)
 
 
 def import_module(module_name, global_name=None, reload=True):
@@ -163,10 +181,18 @@ def install_and_import_module(module_name, package_name=None, global_name=None):
     # The paths used by pip can be checked with `subprocess.run([bpy.app.binary_path_python, "-m", "site"], check=True)`
 
     # Create a copy of the environment variables and modify them for the subprocess call
+    
+    # TODO:cloudpathlib needs this special command: $ pip install cloudpathlib[s3]
+    #  since they provide multiple cloud storage requests, in this case we can specify just s3 to save on download speed
     environ_copy = dict(os.environ)
     environ_copy["PYTHONNOUSERSITE"] = "1"
 
-    subprocess.run([sys.executable, "-m", "pip", "install", package_name], check=True, env=environ_copy)
+    # TODO: Make this section compatible with Darwin and Linux, "Scripts" should be replaced with "bin"
+    subprocess.run(
+            [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", package_name],
+            check=True,
+            env=environ_copy
+    )
 
     # The installation succeeded, attempt to import the module again
     import_module(module_name, global_name)
@@ -205,7 +231,7 @@ class CAT_PGT_Input_Properties_Pre(bpy.types.PropertyGroup):
             description="The save path for the needed modules and the Stable Diffusion weights. If you have already "
                         "installed Cozy Auto Texture, or you are using a different version of Blender, you can use your"
                         " old Environment Path. Regardless of the method, always initiate your Environment.",
-            default="/tmp\\",
+            default=f"{environment_path}",
             maxlen=1024,
             subtype="DIR_PATH"
     )
@@ -355,23 +381,50 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
         return not dependencies_installed
 
     def execute(self, context):
+        global environment_path
+        global venv_path
+        global sd_path
+
+        if environment_path != bpy.context.scene.input_tool_pre.venv_path:
+            environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
+            venv_path = os.path.join(environment_path, "venv")
+            sd_path = os.path.join(environment_path, "stable-diffusion-v1-4")
+
+        # Import PIP:
+        install_pip()
+
+        # Install Venv:
+        if not os.path.exists(venv_path):
+            subprocess.run([sys.executable, "-m", "venv", venv_path], check=True)
+
+        # Activate Venv:
+        if platform.system() == "Windows":
+            activate = os.path.join(venv_path, 'Scripts', 'activate.bat')
+            subprocess.run(activate)
+        elif platform.system() in ["Darwin", "Linux"]:
+            subprocess.run(args=["source", os.path.join(venv_path, "bin", "activate")], check=True)
+        else:
+            raise OSError(
+                    "OS not supported. Cozy Auto Texture only support Darwin, Linux, and Windows operating systems."
+            )
+
         # Importing dependencies
         try:
-            install_pip()
             for dependency in dependencies:
                 install_and_import_module(module_name=dependency.module,
                                           package_name=dependency.package,
                                           global_name=dependency.name)
+            print("Dependencies installed successfully.")
         except (subprocess.CalledProcessError, ImportError) as err:
             self.report({"ERROR"}, str(err))
             return {"CANCELLED"}
 
         # Importing Stable Diffusion
-        try:
-            import_stable_diffusion()
-        except Exception as err:
-            self.report({"ERROR"}, str(err))
-            return {"CANCELLED"}
+        # try:
+        #     import_stable_diffusion(sd_path)
+        # except Exception as err:
+        #     self.report({"ERROR"}, str(err))
+        #     return {"CANCELLED"}
 
         global dependencies_installed
         dependencies_installed = True
