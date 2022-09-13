@@ -7,6 +7,8 @@ This file controls the interactions with the activate.bat file, it opens, modifi
 what functions are needed by Cozy Auto Texture. Each main function, when called, will activate Stable Diffusion with the
 appropriate input variables.
 """
+import bpy
+
 import os
 import pathlib
 import platform
@@ -18,15 +20,24 @@ def modify_execute_bat(venv_path: str, operation_function: str, user_input: dict
     activate_bat_path = os.path.join(venv_path, 'Scripts', 'activate.bat')
     drive = pathlib.Path(activate_bat_path).drive
 
+    sd_interface_path = os.path.join(
+            bpy.utils.resource_path("LOCAL"),
+            "scripts",
+            "addons",
+            "Cozy-Auto-Texture",
+            "src",
+            "sd_interface.py"
+    )
+
     # Get args from user_input:
-    args_string = ""
+    args_string = " "
     for arg_name, arg_value in user_input.items():  # user_input: {param_name: param_value}
-        args_string += f" --{arg_name} {arg_value}"
+        args_string += f"""--{arg_name} "{arg_value}" """
 
     commands = [
             f"""{drive}""",  # Triple quotes so we can include double quotes in commands.
             f"""
-            python "sd_interface.py" {operation_function}{args_string} 
+            python "{sd_interface_path}" {operation_function}{args_string} 
             """,  # NOTE: "operation_function" is the name of the function in sd_interface.py given to the command line.
     ]
 

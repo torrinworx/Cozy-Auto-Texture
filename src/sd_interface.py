@@ -1,7 +1,4 @@
-import bpy
-
 import os
-import sys
 import fire
 from torch import autocast
 from diffusers import StableDiffusionPipeline
@@ -43,16 +40,13 @@ class SDInterfaceCommands(object):
         :return:
         """
 
-        # "cuda" or "cpu" are available options
-
         pipe = StableDiffusionPipeline.from_pretrained(model_path)  # Specify model path
         pipe = pipe.to(device)  # Specify render device
 
         with autocast(device):
             image = pipe(texture_prompt)["sample"][0]
 
-        image_path = uniquify(os.path.join(save_path, texture_name) + texture_format)  # Path to image
-
+        image_path = uniquify(os.path.join(save_path, texture_name) + texture_format)
         image.save(image_path)
 
         return image_path

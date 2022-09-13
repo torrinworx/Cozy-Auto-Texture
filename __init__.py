@@ -120,7 +120,7 @@ def import_stable_diffusion(sd_path):
         cloud_path.download_to(sd_path)
 
 
-def import_module(module_name, global_name=None, reload=True):
+def import_module(module_name, global_name=None):
     """
     Import a module.
     :param module_name: Module to import.
@@ -206,7 +206,7 @@ def install_and_import_module(module_name, package_name=None, global_name=None):
     )
 
     # The installation succeeded, attempt to import the module again
-    import_module(module_name, global_name)
+    # import_module(module_name, global_name)
 
 
 # ======== User input Property Group ======== #
@@ -274,23 +274,23 @@ class CreateTextures(bpy.types.Operator):
         name="Reverse Order")
 
     def execute(self, context):
-
         subprocess.run(["pip", "-V"], check=True)
 
         user_input = {
             "texture_name": bpy.context.scene.input_tool.texture_name,
             "texture_prompt": bpy.context.scene.input_tool.texture_prompt,
-            "save_path": bpy.path.abspath(bpy.context.scene.input_tool.save_path),
+            "save_path": os.path.abspath(bpy.path.abspath(bpy.context.scene.input_tool.save_path)),
             "texture_format": bpy.context.scene.input_tool.texture_format,
             "model_path": sd_path,
             "device": bpy.context.scene.input_tool.device,
         }
 
-        if not user_input.save_path:
-            user_input.save_path = tempfile.gettempdir()
-        if user_input.save_path == "/tmp\\":
-            user_input.save_path = tempfile.gettempdir()
+        if not user_input["save_path"]:
+            user_input["save_path"] = tempfile.gettempdir()
+        if user_input["save_path"] == "/tmp\\":
+            user_input["save_path"] = tempfile.gettempdir()
 
+        # "text2img" - name of function inside sd_interface.py file
         execution_handler.modify_execute_bat(venv_path=venv_path, operation_function="text2img", user_input=user_input)
 
         self.report({'INFO'}, f"Texture(s) Created!")
@@ -328,6 +328,9 @@ class CAT_PT_Main(bpy.types.Panel):
 
         row = layout.row()
         row.prop(input_tool, "texture_format")
+
+        row = layout.row()
+        row.prop(input_tool, "device")
 
         layout.separator()
 
@@ -378,16 +381,17 @@ class CAT_PT_Help(bpy.types.Panel):
         row = layout.row()
         layout.label(text=f"{CAT_version}, {LAST_UPDATED}")
 
-        layout.label(text="Installed Dependencies:")
-        for dependency in dependencies:
-            if dependency.name is None and hasattr(globals()[dependency.module], "__version__"):
-                layout.label(text=f"{dependency.module} {globals()[dependency.module].__version__}")
-            elif hasattr(globals()[dependency.name], "__version__"):
-                layout.label(text=f"{dependency.module} {globals()[dependency.name].__version__}")
-            else:
-                layout.label(text=f"{dependency.module}")
-            if os.path.exists(os.path.relpath(sd_version)):
-                layout.label(text=sd_version)
+        # TODO: find better way to displayed installed dependencies:
+        # layout.label(text="Installed Dependencies:")
+        # for dependency in dependencies:
+        #     if dependency.name is None and hasattr(globals()[dependency.module], "__version__"):
+        #         layout.label(text=f"{dependency.module} {globals()[dependency.module].__version__}")
+        #     elif hasattr(globals()[dependency.name], "__version__"):
+        #         layout.label(text=f"{dependency.module} {globals()[dependency.name].__version__}")
+        #     else:
+        #         layout.label(text=f"{dependency.module}")
+        #     if os.path.exists(os.path.relpath(sd_version)):
+        #         layout.label(text=sd_version)
 
 
 # ======== Pre-Dependency Operators ======== #
