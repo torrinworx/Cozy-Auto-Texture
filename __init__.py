@@ -35,13 +35,6 @@ from collections import namedtuple
 
 # Local modules:
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-# Paths:
-current_drive = os.path.join(pathlib.Path.home().drive, os.sep)
-
-environment_path = os.path.join(current_drive, "Cozy-Auto-Texture-Files")
-venv_path = os.path.join(environment_path, "venv")
-sd_path = os.path.join(environment_path, "stable-diffusion-v1-4")
-
 
 # from .src import
 #
@@ -55,20 +48,22 @@ sd_path = os.path.join(environment_path, "stable-diffusion-v1-4")
 #         if i in locals():
 #             importlib.reload(modules[i])
 
+# SD Version:
+sd_version = "stable-diffusion-v1-4"
+# Paths:
+current_drive = os.path.join(pathlib.Path.home().drive, os.sep)
 
-# ======== Helper functions ======== #
+environment_path = os.path.join(current_drive, "Cozy-Auto-Texture-Files")
+venv_path = os.path.join(environment_path, "venv")
+sd_path = os.path.join(environment_path, sd_version)
 
-# Declare all modules that this add-on depends on, that may need to be installed. The package and (global) name can be
-# set to None, if they are equal to the module name. See import_module and ensure_and_import_module for the explanation
-# of the arguments. DO NOT use this to import other parts of this Python add-on, import them as usual with an
-# "import" statement.
-
+# Dependencies
 dependence_list = [
-        "torch",
+        "numpy",
         "diffusers",
         "transformers",
         "cloudpathlib",
-        "numpy"
+        "torch"
 ]
 
 Dependency = namedtuple("Dependency", ["module", "package", "name"])
@@ -77,12 +72,19 @@ dependencies = (Dependency(module=i, package=None, name=None) for i in dependenc
 dependencies_installed = False
 
 # Stable Diffusion weights URL:
-sd_url = "s3://cozy-auto-texture-sd-repo/stable-diffusion-v1-4/"
+sd_url = f"s3://cozy-auto-texture-sd-repo/{sd_version}/"
 
 # Current size of final Environment folder including weights and dependencies:
 # TODO: Make this number dynamic based on the 'sd_url' and dependencies size.
 env_size = 6e+9  # 8GB
 buffer = 1e+9  # 1GB
+
+# ======== Helper functions ======== #
+
+# Declare all modules that this add-on depends on, that may need to be installed. The package and (global) name can be
+# set to None, if they are equal to the module name. See import_module and ensure_and_import_module for the explanation
+# of the arguments. DO NOT use this to import other parts of this Python add-on, import them as usual with an
+# "import" statement.
 
 
 def check_drive_space(path: str = os.getcwd()):
@@ -254,6 +256,8 @@ class CreateTextures(bpy.types.Operator):
         name="Reverse Order")
 
     def execute(self, context):
+
+        subprocess.run(["pip", "-V"], check=True)
 
         class UserInput:
             texture_name = bpy.context.scene.input_tool.texture_name
