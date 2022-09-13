@@ -36,20 +36,22 @@ from collections import namedtuple
 # Local modules:
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
-# from .src import
-#
-# # Refresh Locals for development:
-# if "bpy" in locals():
-#     modules = {
-#         "example": example,
-#     }
-#
-#     for i in modules:
-#         if i in locals():
-#             importlib.reload(modules[i])
+from .src import execution_handler
 
+# Refresh Locals for development:
+if "bpy" in locals():
+    modules = {
+        "execution_handler": execution_handler,
+    }
+
+    for i in modules:
+        if i in locals():
+            importlib.reload(modules[i])
+
+# ======== Variables ======== #
 # SD Version:
 sd_version = "stable-diffusion-v1-4"
+
 # Paths:
 current_drive = os.path.join(pathlib.Path.home().drive, os.sep)
 
@@ -58,33 +60,34 @@ venv_path = os.path.join(environment_path, "venv")
 sd_path = os.path.join(environment_path, sd_version)
 
 # Dependencies
+
+# Declare all modules that this add-on depends on, that may need to be installed. The package and (global) name can be
+# set to None, if they are equal to the module name. See import_module and ensure_and_import_module for the explanation
+# of the arguments. DO NOT use this to import other parts of this Python add-on, see "Local modules" above for examples.
+
 dependence_list = [
+        "fire",
         "numpy",
         "diffusers",
         "transformers",
         "cloudpathlib",
-        "torch"
+        "torch",
 ]
 
 Dependency = namedtuple("Dependency", ["module", "package", "name"])
-dependencies = (Dependency(module=i, package=None, name=None) for i in dependence_list)
-
+dependencies = [Dependency(module=i, package=None, name=None) for i in dependence_list]
 dependencies_installed = False
 
 # Stable Diffusion weights URL:
 sd_url = f"s3://cozy-auto-texture-sd-repo/{sd_version}/"
 
 # Current size of final Environment folder including weights and dependencies:
-# TODO: Make this number dynamic based on the 'sd_url' and dependencies size.
-env_size = 6e+9  # 8GB
+# TODO: Make this number dynamic based on the total "Cozy-Auto-Texture-Files" folder size.
+env_size = 7e+9  # 7GB
 buffer = 1e+9  # 1GB
 
-# ======== Helper functions ======== #
 
-# Declare all modules that this add-on depends on, that may need to be installed. The package and (global) name can be
-# set to None, if they are equal to the module name. See import_module and ensure_and_import_module for the explanation
-# of the arguments. DO NOT use this to import other parts of this Python add-on, import them as usual with an
-# "import" statement.
+# ======== Helper functions ======== #
 
 
 def check_drive_space(path: str = os.getcwd()):
@@ -190,10 +193,16 @@ def install_and_import_module(module_name, package_name=None, global_name=None):
     environ_copy["PYTHONNOUSERSITE"] = "1"
 
     # TODO: Make this section compatible with Darwin and Linux, "Scripts" should be replaced with "bin"
+    print(f"IMPORTING MODULE: {module_name.upper()}")
     subprocess.run(
             [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", package_name],
             check=True,
-            env=environ_copy
+            # env=environ_copy
+    )
+    subprocess.run(
+            [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", "--upgrade", package_name],
+            check=True,
+            # env=environ_copy
     )
 
     # The installation succeeded, attempt to import the module again
@@ -223,6 +232,15 @@ class CAT_PGT_Input_Properties(bpy.types.PropertyGroup):
         default="/tmp\\",
         maxlen=1024,
         subtype="DIR_PATH"
+    )
+
+    device: bpy.props.EnumProperty(
+        name="Device Type",
+        description="Select render device for Stable Diffusion.",
+        items=[
+            ('cuda', 'Cuda (GPU)', 'Render with Cuda (GPU)'),
+            ('cpu', 'CPU', 'Render with CPU'),
+        ]
     )
 
 
@@ -259,21 +277,21 @@ class CreateTextures(bpy.types.Operator):
 
         subprocess.run(["pip", "-V"], check=True)
 
-        class UserInput:
-            texture_name = bpy.context.scene.input_tool.texture_name
-            texture_prompt = bpy.context.scene.input_tool.texture_prompt
-            texture_format = bpy.context.scene.input_tool.texture_format
+        user_input = {
+            "texture_name": bpy.context.scene.input_tool.texture_name,
+            "texture_prompt": bpy.context.scene.input_tool.texture_prompt,
+            "save_path": bpy.path.abspath(bpy.context.scene.input_tool.save_path),
+            "texture_format": bpy.context.scene.input_tool.texture_format,
+            "model_path": sd_path,
+            "device": bpy.context.scene.input_tool.device,
+        }
 
-            save_path = bpy.path.abspath(bpy.context.scene.input_tool.save_path)
-
-        if not UserInput.save_path:
-            UserInput.save_path = tempfile.gettempdir()
-        if UserInput.save_path == "/tmp\\":
-            UserInput.save_path = tempfile.gettempdir()
-
-        from src.main import text2img  # Imported here to account for pre-dependency.
-
-        text2img(UserInput)
+        if not user_input.save_path:
+            user_input.save_path = tempfile.gettempdir()
+        if user_input.save_path == "/tmp\\":
+            user_input.save_path = tempfile.gettempdir()
+        
+        execution_handler.modify_execute_bat(venv_path=venv_path, operation_function="text2img", user_input=user_input)
 
         self.report({'INFO'}, f"Texture(s) Created!")
         return {"FINISHED"}
@@ -339,8 +357,10 @@ class CAT_PT_Help(bpy.types.Panel):
         row.label(text=f"Looking for help?")
 
         row = layout.row()
-        row.operator("wm.url_open", text="Cozy Auto Texture Documentation",
-                icon='URL').url = "https://github.com/torrinworx/Cozy-Auto-Texture"
+        row.operator(
+                "wm.url_open", text="Cozy Auto Texture Documentation",
+                icon='URL'
+        ).url = "https://github.com/torrinworx/Cozy-Auto-Texture"
 
         row = layout.row()
         row.operator(
@@ -350,8 +370,10 @@ class CAT_PT_Help(bpy.types.Panel):
         ).url = "https://www.youtube.com/c/ThisCozyStudio"
 
         row = layout.row()
-        row.operator("wm.url_open", text="Join Our Discord Community!",
-                icon='URL').url = "https://discord.gg/UpZt5Un57t"
+        row.operator(
+                "wm.url_open", text="Join Our Discord Community!",
+                icon='URL'
+        ).url = "https://discord.gg/UpZt5Un57t"
 
         row = layout.row()
         layout.label(text=f"{CAT_version}, {LAST_UPDATED}")
@@ -364,8 +386,8 @@ class CAT_PT_Help(bpy.types.Panel):
                 layout.label(text=f"{dependency.module} {globals()[dependency.name].__version__}")
             else:
                 layout.label(text=f"{dependency.module}")
-            if os.path.exists(os.path.relpath("stable-diffusion-v1-4")):
-                layout.label(text="stable-diffusion-v1-4")
+            if os.path.exists(os.path.relpath(sd_version)):
+                layout.label(text=sd_version)
 
 
 # ======== Pre-Dependency Operators ======== #
@@ -414,6 +436,7 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
 
         # Importing dependencies
         try:
+            print(f"DEPENDENCIES: {[i.module for i in dependencies]}")
             for dependency in dependencies:
                 install_and_import_module(module_name=dependency.module,
                                           package_name=dependency.package,
