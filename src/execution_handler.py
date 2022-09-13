@@ -18,6 +18,7 @@ import subprocess
 def modify_execute_bat(venv_path: str, operation_function: str, user_input: dict):
     """"""
     activate_bat_path = os.path.join(venv_path, 'Scripts', 'activate.bat')
+    python_exe_path = os.path.join(venv_path, 'Scripts', 'python.exe')
     drive = pathlib.Path(activate_bat_path).drive
 
     sd_interface_path = os.path.join(
@@ -37,7 +38,7 @@ def modify_execute_bat(venv_path: str, operation_function: str, user_input: dict
     commands = [
             f"""{drive}""",  # Triple quotes so we can include double quotes in commands.
             f"""
-            python "{sd_interface_path}" {operation_function}{args_string} 
+            "{python_exe_path}" "{sd_interface_path}" {operation_function}{args_string} 
             """,  # NOTE: "operation_function" is the name of the function in sd_interface.py given to the command line.
     ]
 
@@ -50,7 +51,7 @@ def modify_execute_bat(venv_path: str, operation_function: str, user_input: dict
             for line in commands:
                 bat_out.write(f"\n{line}")
 
-    # Run activate.bat, activate Venv and run command:
+    # Run activate.bat, activate Venv:
     if platform.system() == "Windows":
         subprocess.run(activate_bat_path)
     elif platform.system() in ["Darwin", "Linux"]:

@@ -1,6 +1,7 @@
 import os
 import fire
 from torch import autocast
+from cloudpathlib import CloudPath
 from diffusers import StableDiffusionPipeline
 
 
@@ -25,6 +26,17 @@ def uniquify(path):
 
 # ======== Command Line ======== #
 class SDInterfaceCommands(object):
+    def import_stable_diffusion(self, sd_path, sd_url):
+        """
+        Imports Stable Diffusion from the 'sd_url' using the 'cloudpathlib' library.
+        """
+
+        cloud_path = CloudPath(sd_url)
+
+        if not os.path.exists(sd_path):
+            # shutil.rmtree(sd_path)
+            os.makedirs(sd_path)
+            cloud_path.download_to(sd_path)
 
     def text2img(
             self,

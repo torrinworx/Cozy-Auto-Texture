@@ -70,7 +70,7 @@ dependence_list = [
         "numpy",
         "diffusers",
         "transformers",
-        "cloudpathlib",
+        "cloudpathlib[s3]",
         "torch",
 ]
 
@@ -103,21 +103,6 @@ def check_drive_space(path: str = os.getcwd()):
         return True
     else:
         return False
-
-
-def import_stable_diffusion(sd_path):
-    """
-    Imports Stable Diffusion from the 'sd_url' using the 'cloudpathlib' library.
-    """
-
-    from cloudpathlib import CloudPath
-
-    cloud_path = CloudPath(sd_url)
-
-    if not os.path.exists(sd_path):
-        # shutil.rmtree(sd_path)
-        os.makedirs(sd_path)
-        cloud_path.download_to(sd_path)
 
 
 def import_module(module_name, global_name=None):
@@ -450,12 +435,23 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
             self.report({"ERROR"}, str(err))
             return {"CANCELLED"}
 
+        user_input = {
+                "sd_path": sd_path,
+                "sd_url": sd_url
+        }
+
         # Importing Stable Diffusion
-        # try:
-        #     import_stable_diffusion(sd_path)
-        # except Exception as err:
-        #     self.report({"ERROR"}, str(err))
-        #     return {"CANCELLED"}
+        try:
+            execution_handler.modify_execute_bat(
+                    venv_path=venv_path,
+                    operation_function="import_stable_diffusion",
+                    user_input=user_input
+            )
+            # import_stable_diffusion(sd_path)
+            self.report({"INFO"}, "Successfully downloaded Stable Diffusion model!")
+        except Exception as err:
+            self.report({"ERROR"}, str(err))
+            return {"CANCELLED"}
 
         global dependencies_installed
         dependencies_installed = True
