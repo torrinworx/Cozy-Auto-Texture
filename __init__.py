@@ -1,7 +1,7 @@
 bl_info = {
         "name": "Cozy Auto Texture",
         "author": "Torrin Leonard, This Cozy Studio Inc.",
-        "version": (0, 0, 2),
+        "version": (0, 0, 3),
         "blender": (3, 2, 2),
         "location": "View3D > Sidebar > Cozy Auto Texture",
         "description": "A free and opensource Blender add-on that enables you to create automatic textures from simple "
@@ -13,8 +13,8 @@ bl_info = {
         "category": "Development",
 }
 
-CAT_version = "v0.0.2"
-LAST_UPDATED = "07:10PM, Sept 3rd, 2022"
+CAT_version = "v0.0.3"
+LAST_UPDATED = "01:37PM, Sept 13rd, 2022"
 
 # Blender modules:
 import bpy
@@ -290,7 +290,7 @@ class CreateTextures(bpy.types.Operator):
             user_input.save_path = tempfile.gettempdir()
         if user_input.save_path == "/tmp\\":
             user_input.save_path = tempfile.gettempdir()
-        
+
         execution_handler.modify_execute_bat(venv_path=venv_path, operation_function="text2img", user_input=user_input)
 
         self.report({'INFO'}, f"Texture(s) Created!")
