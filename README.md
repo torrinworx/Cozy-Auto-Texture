@@ -1,10 +1,10 @@
 # Cozy-Auto-Texture
-A bridge between Blender and Stable Diffusion for the purposes of creating AI generated textures.
+Create textures inside Blender just using text prompts!
 
-The purpose of this repository is to be the begining of a Blender add-on that automatically generates, upscales, and/or modifies 2D 1x1 image textures to be used in Blender or other 3D software. 
+The Cozy Auto Texture Blender add-on can automatically generate textures withing Blender for whatever project you are working on. All dependencies are automatically downloaded, including the Stable Diffusion weights! And the best part: you don't need to run Blender with admin privileges.
 
-Stable Diffusion and the weights that are used (`stable-diffusion-v1-4`) are to large to store on GitHub effectively. For the purposes of this repository they are stored and retreived from this: https://drive.google.com/drive/folders/1e77rFcVUlEH7G5RhQDwtGwdUOiG0EdJc?usp=sharing
+Stable Diffusion and the weights that are used (`stable-diffusion-v1-4`) are to large to store on GitHub effectively. They are downloaded from an AWS S3 bucket in a .zip file, then unzipped onto your system when you install the dependencies in the add-on settings. The Stable Diffusion weights are around 5GB in size, so the download takes a while. It's recommended that you open the Blender System Console in `Window > Toggle System Console` to display the download progress. 
 
-Cozy Auto Texture will automatically download the wieghts at the above link when you install the dependencies in `Edit > Preferences > Add-ons` by clicking on the `Install dependencies` button.
+Cozy Auto Texture will automatically download the wieghts and Python dependencies when you install the dependencies in `Edit > Preferences > Add-ons` by accepting the license agreements checkbox and then clicking on the `Install dependencies` button.
 
-This folder will automatically be downloaded into the directory Blender is installed, typically: `C:\Program Files\Blender Foundation\Blender 3.2\3.2\scripts\addons\Cozy-Auto-Texture`
+You can also set the path that the dependencies should be installed to. It's recommended to have at least 10GB of drive space avialable.
