@@ -98,21 +98,19 @@ def execution_handler(venv_path: str, operation_function: str, user_input: dict)
 
     # Run activate.bat, activate Venv:
     if platform.system() == "Windows":
-        output = subprocess.run(
+        output = subprocess.check_output(
                 activate_bat_path,
-                capture_output=True
         )
+        return output
     elif platform.system() in ["Darwin", "Linux"]:
-        output = subprocess.run(
+        output = subprocess.check_output(
                 args=["source", os.path.join(venv_path, "bin", "activate")],
-                check=True,
-                capture_output=True
         )
+        return output
     else:
         raise OSError(
                 "OS not supported. Cozy Auto Texture only support Darwin, Linux, and Windows operating systems."
         )
-    return output
 
 
 # Dependency handling:
@@ -140,6 +138,7 @@ def are_dependencies_installed():
 
                 # TODO: Output of 'execution_handler' needs to be verified that it outputs bool of check_imports()
                 #  return
+                # *Should work with new 'output = subprocess.check_output()' method
                 modules_installed = execution_handler(
                         venv_path=venv_path,
                         operation_function="check_imports",
