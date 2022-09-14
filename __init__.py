@@ -52,6 +52,9 @@ if "bpy" in locals():
 # SD Version:
 sd_version = "stable-diffusion-v1-4"
 
+# Stable Diffusion weights URL:
+sd_url = f"https://cozy-auto-texture-sd-repo.s3.us-east-2.amazonaws.com/{sd_version}.zip"
+
 # Paths:
 current_drive = os.path.join(pathlib.Path.home().drive, os.sep)
 
@@ -70,16 +73,12 @@ dependence_list = [
         "numpy",
         "diffusers",
         "transformers",
-        "cloudpathlib[s3]",
         "torch",
 ]
 
 Dependency = namedtuple("Dependency", ["module", "package", "name"])
 dependencies = [Dependency(module=i, package=None, name=None) for i in dependence_list]
 dependencies_installed = False
-
-# Stable Diffusion weights URL:
-sd_url = f"s3://cozy-auto-texture-sd-repo/{sd_version}/"
 
 # Current size of final Environment folder including weights and dependencies:
 # TODO: Make this number dynamic based on the total "Cozy-Auto-Texture-Files" folder size.
@@ -412,17 +411,6 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
         if not os.path.exists(venv_path):
             subprocess.run([sys.executable, "-m", "venv", venv_path], check=True)
 
-        # Activate Venv:
-        if platform.system() == "Windows":
-            activate = os.path.join(venv_path, 'Scripts', 'activate.bat')
-            subprocess.run(activate)
-        elif platform.system() in ["Darwin", "Linux"]:
-            subprocess.run(args=["source", os.path.join(venv_path, "bin", "activate")], check=True)
-        else:
-            raise OSError(
-                    "OS not supported. Cozy Auto Texture only support Darwin, Linux, and Windows operating systems."
-            )
-
         # Importing dependencies
         try:
             print(f"DEPENDENCIES: {[i.module for i in dependencies]}")
@@ -437,7 +425,8 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
 
         user_input = {
                 "sd_path": sd_path,
-                "sd_url": sd_url
+                "sd_url": sd_url,
+                "venv_path": venv_path,
         }
 
         # Importing Stable Diffusion
@@ -447,7 +436,6 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
                     operation_function="import_stable_diffusion",
                     user_input=user_input
             )
-            # import_stable_diffusion(sd_path)
             self.report({"INFO"}, "Successfully downloaded Stable Diffusion model!")
         except Exception as err:
             self.report({"ERROR"}, str(err))

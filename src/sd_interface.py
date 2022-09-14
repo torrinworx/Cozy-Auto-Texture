@@ -1,7 +1,9 @@
 import os
+import sys
 import fire
+import zipfile
+import requests
 from torch import autocast
-from cloudpathlib import CloudPath
 from diffusers import StableDiffusionPipeline
 
 
@@ -26,17 +28,41 @@ def uniquify(path):
 
 # ======== Command Line ======== #
 class SDInterfaceCommands(object):
-    def import_stable_diffusion(self, sd_path, sd_url):
+    def import_stable_diffusion(self, sd_path, sd_url, venv_path):
         """
-        Imports Stable Diffusion from the 'sd_url' using the 'cloudpathlib' library.
+        Imports Stable Diffusion from the 'sd_url' as a zip file, then unzips SD.
         """
 
-        cloud_path = CloudPath(sd_url)
+        # Download zip file
+        zip_path = sd_path + ".zip"
 
-        if not os.path.exists(sd_path):
-            # shutil.rmtree(sd_path)
-            os.makedirs(sd_path)
-            cloud_path.download_to(sd_path)
+        with open(zip_path, 'wb+') as file:
+            r = requests.get(sd_url, stream=True)
+            total_length = r.headers.get('content-length')
+
+            if total_length is None:  # no content length header
+                file.write(r.content)
+            else:
+                dl = 0
+                total_length = int(total_length)
+                for data in r.iter_content(chunk_size=4096):
+                    dl += len(data)
+                    file.write(data)
+                    done = int(50 * dl / total_length)
+                    sys.stdout.write("\r[%s%s]" % ('=' * done, ' ' * (50 - done)))
+                    sys.stdout.flush()
+
+        # Unzip file
+        unzipped_path = os.path.join(venv_path, zipfile.ZipFile(zip_path).namelist()[0])
+
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(venv_path)
+
+        os.remove(zip_path)
+
+        print(f"Stable Diffusion downloaded, unzipped, and installed at:\n{unzipped_path}")
+
+        return unzipped_path
 
     def text2img(
             self,
