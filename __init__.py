@@ -1,7 +1,7 @@
 bl_info = {
         "name": "Cozy Auto Texture",
         "author": "Torrin Leonard, This Cozy Studio Inc.",
-        "version": (0, 0, 3),
+        "version": (0, 0, 4),
         "blender": (3, 2, 2),
         "location": "View3D > Sidebar > Cozy Auto Texture",
         "description": "A free and opensource Blender add-on that enables you to create automatic textures from simple "
@@ -13,8 +13,8 @@ bl_info = {
         "category": "Development",
 }
 
-CAT_version = "v0.0.3"
-LAST_UPDATED = "01:37PM, Sept 13rd, 2022"
+CAT_version = "v0.0.4"
+LAST_UPDATED = "11:40PM, Sept 13rd, 2022"
 
 # Blender modules:
 import bpy
