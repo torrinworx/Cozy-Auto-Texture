@@ -27,13 +27,13 @@ sd_path = os.path.join(environment_path, sd_version)
 # set to None, if they are equal to the module name. See import_module and ensure_and_import_module for the explanation
 # of the arguments. DO NOT use this to import other parts of this Python add-on, see "Local modules" above for examples.
 
-dependence_list = [
-        "fire",
-        "numpy",
-        "diffusers",
-        "transformers",
-        "torch==1.12.1+cu116",
-]
+dependence_dict = {
+        "fire": [],
+        "numpy": [],
+        "diffusers": [],
+        "transformers": [],
+        "torch==1.12.1+cu116": ["-f", "https://download.pytorch.org/whl/torch_stable.html"],
+}
 
 # Current size of final Environment folder including weights and dependencies:
 # TODO: Make this number dynamic based on the total "Cozy-Auto-Texture-Files" folder size.
@@ -98,28 +98,38 @@ def install_pip():
 
 def install_and_import_module():
     """
-    Installs the package through pip and attempts to import the installed module.
-    :param module_name: Module to import.
-    :param package_name: (Optional) Name of the package that needs to be installed. If None it is assumed to be equal
+    Installs the package through pip and will attempt to import modules into the Venv, or if make_global = True import
+    them globally.
+    :param make_global: Makes imported modules global if True, will not install imports to Venv. If false, modules will
+    only be installed to the Venv to be used with the Stable Diffusion libraries.
+    :raises: subprocess.CalledProcessError and ImportError
+
+    Deprecated:
+    module_name: Module to import.
+    package_name: (Optional) Name of the package that needs to be installed. If None it is assumed to be equal
        to the module_name.
-    :param global_name: (Optional) Name under which the module is imported. If None the module_name will be used.
+    global_name: (Optional) Name under which the module is imported. If None the module_name will be used.
        This allows to import under a different name with the same effect as e.g. "import numpy as np" where "np" is
        the global_name under which the module can be accessed.
-    :raises: subprocess.CalledProcessError and ImportError
     """
 
-    Dependency = namedtuple("Dependency", ["module", "package", "name"])
-    dependencies = [Dependency(module=i, package=None, name=None) for i in dependence_list]
+    # TODO: create method for importing Venv specific modules for Stable Diffusion, and method for importing modules
+    #  for other Cozy Auto Textures features. This install_and_import_module() function needs to be cleaned up.
+
+    Dependency = namedtuple("Dependency", ["module", "name", "extra_params"])
+    dependencies = [Dependency(module=i, name=None, extra_params=j) for i, j in dependence_dict.items()]
 
     print(f"Installing dependencies: {''.join([i.module for i in dependencies])}")
 
     for dependency in dependencies:
         module_name = dependency.module_name
-        package_name = dependency.package_name
         global_name = dependency.global_name
+        extra_params = dependency.extra_params
+        make_global = False
 
-        if package_name is None:
-            package_name = module_name
+        if "make_global" in extra_params:
+            extra_params.remove("make_global")
+            make_global = True
 
         if global_name is None:
             global_name = module_name
@@ -129,7 +139,8 @@ def install_and_import_module():
         # site-packages and pip deems the requirement satisfied, but Blender cannot import the package from the user
         # site-packages. Hence, the environment variable PYTHONNOUSERSITE is set to disallow pip from checking the user
         # site-packages. If the package is not already installed for Blender's Python interpreter, it will then try to.
-        # The paths used by pip can be checked with `subprocess.run([bpy.app.binary_path_python, "-m", "site"], check=True)`
+        # The paths used by pip can be checked with the following:
+        # `subprocess.run([bpy.app.binary_path_python, "-m", "site"], check=True)`
 
         # Create a copy of the environment variables and modify them for the subprocess call
 
@@ -137,28 +148,27 @@ def install_and_import_module():
         environ_copy["PYTHONNOUSERSITE"] = "1"
 
         # TODO: Make this section compatible with Darwin and Linux, "Scripts" should be replaced with "bin"
-        if package_name == "torch==1.12.1+cu116":
-            subprocess.run(
-                    [
-                            os.path.join(venv_path, "Scripts", "python"),
-                            "-m",
-                            "pip",
-                            "install",
-                            package_name,
-                            "-f",
-                            "https://download.pytorch.org/whl/torch_stable.html",
-                    ],
-                    check=True,
-            )
-        else:
-            subprocess.run(
-                    [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", package_name],
-                    check=True,
-            )
-            subprocess.run(
-                    [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", "--upgrade", package_name],
-                    check=True,
-            )
+
+        install_commands_list = [
+                os.path.join(venv_path, "Scripts", "python"),
+                "-m",
+                "pip",
+                "install",
+                module_name
+        ]
+
+        if extra_params:
+            install_commands_list.extend(extra_params)
+
+        subprocess.run(
+                install_commands_list,
+                check=True,
+        )
+        subprocess.run(
+                [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", "--upgrade", module_name],
+                check=True,
+                env=environ_copy
+        )
 
         # The installation succeeded, attempt to import the module again
         # import_module(module_name, global_name)
