@@ -73,7 +73,7 @@ dependence_list = [
         "numpy",
         "diffusers",
         "transformers",
-        "torch",
+        "torch==1.12.1+cu116",
 ]
 
 Dependency = namedtuple("Dependency", ["module", "package", "name"])
@@ -178,16 +178,31 @@ def install_and_import_module(module_name, package_name=None, global_name=None):
 
     # TODO: Make this section compatible with Darwin and Linux, "Scripts" should be replaced with "bin"
     print(f"IMPORTING MODULE: {module_name.upper()}")
-    subprocess.run(
-            [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", package_name],
-            check=True,
-            # env=environ_copy
-    )
-    subprocess.run(
-            [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", "--upgrade", package_name],
-            check=True,
-            # env=environ_copy
-    )
+    if package_name == "torch==1.12.1+cu116":
+        subprocess.run(
+                [
+                        os.path.join(venv_path, "Scripts", "python"),
+                        "-m",
+                        "pip",
+                        "install",
+                        package_name,
+                        "-f",
+                        "https://download.pytorch.org/whl/torch_stable.html",
+                ],
+                check=True,
+                # env=environ_copy
+        )
+    else:
+        subprocess.run(
+                [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", package_name],
+                check=True,
+                # env=environ_copy
+        )
+        subprocess.run(
+                [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", "--upgrade", package_name],
+                check=True,
+                # env=environ_copy
+        )
 
     # The installation succeeded, attempt to import the module again
     # import_module(module_name, global_name)
