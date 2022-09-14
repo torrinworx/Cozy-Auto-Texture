@@ -247,6 +247,8 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
         return not dependencies_installed
 
     def execute(self, context):
+        # TODO: investigate asyncornous methods so that Blender doesn't freeze up when executing this script:
+
         global environment_path
         global venv_path
         global sd_path
@@ -280,7 +282,7 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
 
         # Importing Stable Diffusion
         try:
-            execution_handler.execution_handler(
+            helpers.execution_handler(
                     venv_path=venv_path,
                     operation_function="import_stable_diffusion",
                     user_input=user_input

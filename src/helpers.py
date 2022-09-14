@@ -33,8 +33,11 @@ dependence_dict = {
         "diffusers": [],
         "transformers": [],
         "torch==1.12.1+cu116": ["-f", "https://download.pytorch.org/whl/torch_stable.html"],
-        "requests": ["make_global"]
+        "Pillow": ["make_global"]
 }
+
+Dependency = namedtuple("Dependency", ["module", "name", "extra_params"])
+dependencies = [Dependency(module=i, name=None, extra_params=j) for i, j in dependence_dict.items()]
 
 # Current size of final Environment folder including weights and dependencies:
 # TODO: Make this number dynamic based on the total "Cozy-Auto-Texture-Files" folder size.
@@ -77,12 +80,27 @@ def install_pip():
         os.environ.pop("PIP_REQ_TRACKER", None)
 
 
+def import_module(module_name):
+    """
+    Import a module.
+    :param module_name: Module to import.
+    :raises: ImportError and ModuleNotFoundError
+    """
+
+    if module_name in globals():
+        importlib.reload(globals()[module_name])
+    else:
+        # Attempt to import the module and assign it to globals dictionary. This allows to access the module
+        # under the given name, just like the regular import would.
+        globals()[module_name] = importlib.import_module(module_name)
+
+
 def install_and_import_module():
     """
     Installs the package through pip and will attempt to import modules into the Venv, or if make_global = True import
     them globally.
-    :param make_global: Makes imported modules global if True, will not install imports to Venv. If false, modules will
-    only be installed to the Venv to be used with the Stable Diffusion libraries.
+    :param import_global: Makes installed modules global if True, will not install imports to Venv. If false, modules
+        will only be installed to the Venv to be used with the Stable Diffusion libraries.
     :raises: subprocess.CalledProcessError and ImportError
 
     Deprecated:
@@ -96,23 +114,16 @@ def install_and_import_module():
 
     # TODO: Make this section compatible with Darwin and Linux, "Scripts" should be replaced with "bin"
 
-    Dependency = namedtuple("Dependency", ["module", "name", "extra_params"])
-    dependencies = [Dependency(module=i, name=None, extra_params=j) for i, j in dependence_dict.items()]
-
     print(f"Installing dependencies: {''.join([i.module for i in dependencies])}")
 
     for dependency in dependencies:
         module_name = dependency.module_name
-        global_name = dependency.global_name
         extra_params = dependency.extra_params
         make_global = False
 
         if "make_global" in extra_params:
             extra_params.remove("make_global")
             make_global = True
-
-        if global_name is None:
-            global_name = module_name
 
         # Blender disables the loading of user site-packages by default. However, pip will still check them to determine
         # if a dependency is already installed. This can cause problems if the packages is installed in the user
@@ -154,27 +165,16 @@ def install_and_import_module():
                     env=environ_copy
             )
 
-            def import_module(module_name, global_name=None):
-                """
-                Import a module.
-                :param module_name: Module to import.
-                :param global_name: (Optional) Name under which the module is imported. If None the module_name will be
-                    used. This allows to import under a different name with the same effect as e.g. "import numpy as np"
-                    where "np" is the global_name under which the module can be accessed.
-                :raises: ImportError and ModuleNotFoundError
-                """
-                if global_name is None:
-                    global_name = module_name
+            # After installation succeeded, attempt to import the module globally:
+            import_module(module_name)
 
-                if global_name in globals():
-                    importlib.reload(globals()[global_name])
-                else:
-                    # Attempt to import the module and assign it to globals dictionary. This allows to access the module
-                    # under the given name, just like the regular import would.
-                    globals()[global_name] = importlib.import_module(module_name)
-
-            # The installation succeeded, attempt to import the module again
-            import_module(module_name, global_name)
+    # Test global installation worked:
+    try:
+        import PIL
+        print(f"{PIL.__version__}")
+        print("SUCCESSFULLY IMPORTED PIL GLOBALLY")
+    except ImportError as err:
+        print(f"ERROR IMPORTING PIL:\n{err}")
 
 
 # Venv execution handler:
