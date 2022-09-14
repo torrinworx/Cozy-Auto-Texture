@@ -45,11 +45,6 @@ if "bpy" in locals():
         if i in locals():
             importlib.reload(modules[i])
 
-environment_path = helpers.environment_path
-venv_path = helpers.venv_path
-sd_path = helpers.sd_path
-
-dependencies_installed = helpers.dependencies_installed
 
 # ======== User input Property Group ======== #
 class CAT_PGT_Input_Properties(bpy.types.PropertyGroup):
@@ -93,7 +88,7 @@ class CAT_PGT_Input_Properties_Pre(bpy.types.PropertyGroup):
             description="The save path for the needed modules and the Stable Diffusion weights. If you have already "
                         "installed Cozy Auto Texture, or you are using a different version of Blender, you can use your"
                         " old Environment Path. Regardless of the method, always initiate your Environment.",
-            default=f"{environment_path}",
+            default=f"{helpers.current_drive}",
             maxlen=1024,
             subtype="DIR_PATH"
     )
@@ -349,7 +344,7 @@ class CATPRE_preferences(bpy.types.AddonPreferences):
         # This line represents the character space readable in Blender's UI system:
         #         |=======================================================================|
         lines = [
-                f"Please read the two following License Agreement. You must accept the terms ",
+                f"Please read the two following License Agreements. You must accept the terms ",
                 f"of the License Agreement before continuing with the installation.",
         ]
 
@@ -414,6 +409,11 @@ pre_dependency_classes = (
 
 
 def register():
+    # TODO:
+    #  1. Detect if dependencies are already installed when restarting add-on
+    #  2. Detect if dependencies are installed when fresh installing add-on on different Blender version for example
+    #  Possible solution use environ variables: os.environ['variable_name'] = 'variable_value'
+
     global dependencies_installed
     dependencies_installed = False
 
@@ -422,12 +422,17 @@ def register():
 
     bpy.types.Scene.input_tool_pre = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties_Pre)
 
+    # Paths:
+    global environment_path  # NOTE: 'environment_Path' needs to be declared after registration of 'input_tool_pre'
+    environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
+    global venv_path
+    venv_path = os.path.join(environment_path, "venv")
+    global sd_path
+    sd_path = os.path.join(environment_path, helpers.sd_version)
+
     try:
-        # If Modules installed to Venv, and modules installed to Blender if 'make_global' specified, and if Stable
-        # Diffusion installed to the 'Cozy-Auto-Texture-Files' folder, then set dependecies_installed = True
-        for dependency in helpers.dependencies:
-            helpers.import_module(module_name=dependency.module)
-        dependencies_installed = True
+        helpers.are_dependencies_installed()
+
     except ModuleNotFoundError:
         return  # Don't register other panels, operators etc.
 

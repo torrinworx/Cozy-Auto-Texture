@@ -10,17 +10,11 @@ import subprocess
 import pkg_resources
 from collections import namedtuple
 
-
 # ======== Variables ======== #
+# SD
+
 sd_version = "stable-diffusion-v1-4"
 sd_url = f"https://cozy-auto-texture-sd-repo.s3.us-east-2.amazonaws.com/{sd_version}.zip"
-
-# Paths:
-current_drive = os.path.join(pathlib.Path.home().drive, os.sep)
-
-environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
-venv_path = os.path.join(environment_path, "venv")
-sd_path = os.path.join(environment_path, sd_version)
 
 # Dependencies
 
@@ -41,10 +35,13 @@ Dependency = namedtuple("Dependency", ["module", "name", "extra_params"])
 dependencies = [Dependency(module=i, name=None, extra_params=j) for i, j in dependence_dict.items()]
 dependencies_installed = False
 
-# Current size of final Environment folder including weights and dependencies:
+# Current size of final Environment folder including weights and dependencies in bytes:
 # TODO: Make this number dynamic based on the total "Cozy-Auto-Texture-Files" folder size.
 env_size = 7e+9  # 7GB
 buffer = 1e+9  # 1GB
+
+# Current Drive:
+current_drive = os.path.join(pathlib.Path.home().drive, os.sep)
 
 
 # ======== Helper functions ======== #
@@ -112,7 +109,6 @@ def execution_handler(venv_path: str, operation_function: str, user_input: dict)
                 "OS not supported. Cozy Auto Texture only support Darwin, Linux, and Windows operating systems."
         )
 
-
 # Dependency handling:
 
 def set_dependencies_installed(are_installed):
@@ -160,7 +156,7 @@ def are_dependencies_installed():
         return False
 
     set_dependencies_installed(True)
-    return True
+    return modules_installed
 
 
 def install_pip():
