@@ -33,6 +33,7 @@ dependence_dict = {
         "diffusers": [],
         "transformers": [],
         "torch==1.12.1+cu116": ["-f", "https://download.pytorch.org/whl/torch_stable.html"],
+        "requests": ["make_global"]
 }
 
 # Current size of final Environment folder including weights and dependencies:
@@ -53,26 +54,6 @@ def are_dependencies_installed():
 def set_dependencies_installed(are_installed):
     global dependencies_installed
     dependencies_installed = are_installed
-
-
-def import_module(module_name, global_name=None):
-    """
-    Import a module.
-    :param module_name: Module to import.
-    :param global_name: (Optional) Name under which the module is imported. If None the module_name will be used.
-       This allows to import under a different name with the same effect as e.g. "import numpy as np" where "np" is
-       the global_name under which the module can be accessed.
-    :raises: ImportError and ModuleNotFoundError
-    """
-    if global_name is None:
-        global_name = module_name
-
-    if global_name in globals():
-        importlib.reload(globals()[global_name])
-    else:
-        # Attempt to import the module and assign it to globals dictionary. This allow to access the module under
-        # the given name, just like the regular import would.
-        globals()[global_name] = importlib.import_module(module_name)
 
 
 def install_pip():
@@ -113,8 +94,7 @@ def install_and_import_module():
        the global_name under which the module can be accessed.
     """
 
-    # TODO: create method for importing Venv specific modules for Stable Diffusion, and method for importing modules
-    #  for other Cozy Auto Textures features. This install_and_import_module() function needs to be cleaned up.
+    # TODO: Make this section compatible with Darwin and Linux, "Scripts" should be replaced with "bin"
 
     Dependency = namedtuple("Dependency", ["module", "name", "extra_params"])
     dependencies = [Dependency(module=i, name=None, extra_params=j) for i, j in dependence_dict.items()]
@@ -147,8 +127,6 @@ def install_and_import_module():
         environ_copy = dict(os.environ)
         environ_copy["PYTHONNOUSERSITE"] = "1"
 
-        # TODO: Make this section compatible with Darwin and Linux, "Scripts" should be replaced with "bin"
-
         install_commands_list = [
                 os.path.join(venv_path, "Scripts", "python"),
                 "-m",
@@ -160,18 +138,43 @@ def install_and_import_module():
         if extra_params:
             install_commands_list.extend(extra_params)
 
-        subprocess.run(
-                install_commands_list,
-                check=True,
-        )
-        subprocess.run(
-                [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", "--upgrade", module_name],
-                check=True,
-                env=environ_copy
-        )
+        if not make_global:
+            print(f"\nInstalling {module_name} to {venv_path}.\n")
+            subprocess.run(
+                    install_commands_list,
+                    check=True,
+            )
 
-        # The installation succeeded, attempt to import the module again
-        # import_module(module_name, global_name)
+        if make_global:
+            print(f"\nInstalling {module_name} to {sys.executable}.\n")
+            install_commands_list[0] = sys.executable
+            subprocess.run(
+                    install_commands_list,
+                    check=True,
+                    env=environ_copy
+            )
+
+            def import_module(module_name, global_name=None):
+                """
+                Import a module.
+                :param module_name: Module to import.
+                :param global_name: (Optional) Name under which the module is imported. If None the module_name will be
+                    used. This allows to import under a different name with the same effect as e.g. "import numpy as np"
+                    where "np" is the global_name under which the module can be accessed.
+                :raises: ImportError and ModuleNotFoundError
+                """
+                if global_name is None:
+                    global_name = module_name
+
+                if global_name in globals():
+                    importlib.reload(globals()[global_name])
+                else:
+                    # Attempt to import the module and assign it to globals dictionary. This allows to access the module
+                    # under the given name, just like the regular import would.
+                    globals()[global_name] = importlib.import_module(module_name)
+
+            # The installation succeeded, attempt to import the module again
+            import_module(module_name, global_name)
 
 
 # Venv execution handler:
