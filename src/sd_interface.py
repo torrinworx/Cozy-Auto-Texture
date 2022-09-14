@@ -28,7 +28,7 @@ def uniquify(path):
 
 # ======== Command Line ======== #
 class SDInterfaceCommands(object):
-    def import_stable_diffusion(self, sd_path, sd_url, venv_path):
+    def import_stable_diffusion(self, sd_path: str, sd_url: str, environment_path: str):
         """
         Imports Stable Diffusion from the 'sd_url' as a zip file, then unzips SD.
         """
@@ -53,10 +53,10 @@ class SDInterfaceCommands(object):
                     sys.stdout.flush()
 
         # Unzip file
-        unzipped_path = os.path.join(venv_path, zipfile.ZipFile(zip_path).namelist()[0])
+        unzipped_path = os.path.join(environment_path, zipfile.ZipFile(zip_path).namelist()[0])
 
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(venv_path)
+            zip_ref.extractall(environment_path)
 
         os.remove(zip_path)
 

@@ -426,7 +426,7 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
         user_input = {
                 "sd_path": sd_path,
                 "sd_url": sd_url,
-                "venv_path": venv_path,
+                "environment_path": environment_path,
         }
 
         # Importing Stable Diffusion
