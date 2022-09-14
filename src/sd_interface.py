@@ -5,25 +5,7 @@ import zipfile
 import requests
 from torch import autocast
 from diffusers import StableDiffusionPipeline
-
-
-# ======== Helper functions ======== #
-
-def uniquify(path):
-    """
-    Creates unique paths and increments file names to avoid overwriting images. Checks if paths exist, if it does,
-    increments file name with a given number to ensure it doesn't get overwritten.
-    :param path:
-    :return:
-    """
-    filename, extension = os.path.splitext(path)
-    counter = 1
-
-    while os.path.exists(path):
-        path = filename + " (" + str(counter) + ")" + extension
-        counter += 1
-
-    return path
+from .helpers import uniquify
 
 
 # ======== Command Line ======== #
