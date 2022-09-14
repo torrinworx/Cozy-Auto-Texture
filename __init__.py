@@ -423,8 +423,8 @@ def register():
     bpy.types.Scene.input_tool_pre = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties_Pre)
 
     try:
-        for dependency in dependencies:
-            import_module(module_name=dependency.module, global_name=dependency.name)
+        for dependency in helpers.dependencies:
+            helpers.import_module(module_name=dependency.module)
         dependencies_installed = True
     except ModuleNotFoundError:
         return  # Don't register other panels, operators etc.
