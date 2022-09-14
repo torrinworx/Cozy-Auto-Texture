@@ -45,6 +45,11 @@ if "bpy" in locals():
         if i in locals():
             importlib.reload(modules[i])
 
+environment_path = helpers.environment_path
+venv_path = helpers.venv_path
+sd_path = helpers.sd_path
+
+dependencies_installed = helpers.dependencies_installed
 
 # ======== User input Property Group ======== #
 class CAT_PGT_Input_Properties(bpy.types.PropertyGroup):
@@ -246,24 +251,18 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
         # Deactivate when dependencies have been installed
         return not dependencies_installed
 
-    def execute(self, context):
-        # TODO: investigate asyncornous methods so that Blender doesn't freeze up when executing this script:
+    async def install_dependencies(self, context):
+        # TODO: investigate asynchronous methods so that Blender doesn't freeze up when executing this script:
 
-        global environment_path
-        global venv_path
-        global sd_path
-
-        if environment_path != bpy.context.scene.input_tool_pre.venv_path:
-            environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
-            venv_path = os.path.join(environment_path, "venv")
-            sd_path = os.path.join(environment_path, "stable-diffusion-v1-4")
-
-        # Import PIP:
+        # Install pip:
         helpers.install_pip()
 
         # Install Venv:
         if not os.path.exists(venv_path):
             subprocess.run([sys.executable, "-m", "venv", venv_path], check=True)
+        else:
+            pass
+            # TODO: Upgrade Venv if venv already detected.
 
         # Importing dependencies
         try:
@@ -274,13 +273,13 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
             self.report({"ERROR"}, str(err))
             return {"CANCELLED"}
 
+        # Importing Stable Diffusion
         user_input = {
                 "sd_path": sd_path,
-                "sd_url": sd_url,
+                "sd_url": helpers.sd_url,
                 "environment_path": environment_path,
         }
 
-        # Importing Stable Diffusion
         try:
             helpers.execution_handler(
                     venv_path=venv_path,
@@ -293,8 +292,7 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
             self.report({"ERROR"}, str(err))
             return {"CANCELLED"}
 
-        global dependencies_installed
-        dependencies_installed = True
+        helpers.set_dependencies_installed(True)
 
         # Register the panels, operators, etc. since dependencies are installed
         for cls in classes:
@@ -302,7 +300,9 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
 
         bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
 
-        return {"FINISHED"}
+    def execute(self, context):
+        async_task = asyncio.ensure_future(self.install_dependencies(context))
+        return {'FINISHED'}
 
 
 # ======== Pre-Dependency UI Panels ======== #
@@ -423,6 +423,8 @@ def register():
     bpy.types.Scene.input_tool_pre = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties_Pre)
 
     try:
+        # If Modules installed to Venv, and modules installed to Blender if 'make_global' specified, and if Stable
+        # Diffusion installed to the 'Cozy-Auto-Texture-Files' folder, then set dependecies_installed = True
         for dependency in helpers.dependencies:
             helpers.import_module(module_name=dependency.module)
         dependencies_installed = True

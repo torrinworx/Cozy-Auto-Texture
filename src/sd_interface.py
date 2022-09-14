@@ -3,6 +3,7 @@ import sys
 import fire
 import zipfile
 import requests
+import pkg_resources
 from torch import autocast
 from diffusers import StableDiffusionPipeline
 from .helpers import uniquify
@@ -70,6 +71,15 @@ class SDInterfaceCommands(object):
         image.save(image_path)
 
         return image_path
+
+    def check_imports(self, module_name: str):
+        installed_modules = {pkg.key for pkg in pkg_resources.working_set}
+        installed = False
+
+        if module_name in installed_modules:
+            installed = True
+
+        return installed
 
 
 if __name__ == '__main__':
