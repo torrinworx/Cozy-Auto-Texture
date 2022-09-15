@@ -110,6 +110,10 @@ class CreateTextures(bpy.types.Operator):
         return context.window_manager.invoke_confirm(self, event)
 
     async def sd_interaction(self, context):
+        environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
+        venv_path = os.path.join(environment_path, "venv")
+        sd_path = os.path.join(environment_path, helpers.sd_version)
+
         subprocess.run(["pip", "-V"], check=True)
 
         user_input = {
@@ -242,12 +246,21 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
     bl_options = {"REGISTER", "INTERNAL"}
 
     @classmethod
-    def poll(self, context):
-        # Deactivate when dependencies have been installed
-        return not dependencies_installed
+    def poll(cls, context):
+        environment_path = os.path.exists(
+                os.path.join(
+                        bpy.context.scene.input_tool_pre.venv_path,
+                        "Cozy-Auto-Texture-Files"
+                )
+        )
+
+        return not environment_path
 
     async def install_dependencies(self, context):
-        # TODO: investigate asynchronous methods so that Blender doesn't freeze up when executing this script:
+        # Paths:
+        environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
+        venv_path = os.path.join(environment_path, "venv")
+        sd_path = os.path.join(environment_path, helpers.sd_version)
 
         # Install pip:
         helpers.install_pip()
@@ -261,7 +274,7 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
 
         # Importing dependencies
         try:
-            helpers.install_and_import_module()
+            helpers.install_and_import_module(venv_path=venv_path)
 
             print("Dependencies installed successfully.")
         except (subprocess.CalledProcessError, ImportError) as err:
@@ -287,9 +300,10 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
             self.report({"ERROR"}, str(err))
             return {"CANCELLED"}
 
+        os.environ['CAT_ENVIRONMENT_PATH'] = environment_path
+
         helpers.set_dependencies_installed(True)
 
-        # Register the panels, operators, etc. since dependencies are installed
         for cls in classes:
             bpy.utils.register_class(cls)
 
@@ -422,25 +436,16 @@ def register():
 
     bpy.types.Scene.input_tool_pre = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties_Pre)
 
-    # Paths:
-    global environment_path  # NOTE: 'environment_Path' needs to be declared after registration of 'input_tool_pre'
-    environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
-    global venv_path
-    venv_path = os.path.join(environment_path, "venv")
-    global sd_path
-    sd_path = os.path.join(environment_path, helpers.sd_version)
+    environment_path = os.environ.get("CAT_ENVIRONMENT_PATH")
+    print(f"ENVIRONEMNT_PATH ==== {environment_path}")
+    if environment_path is not None:
+        if os.path.exists(os.getenv("CAT_ENVIRONMENT_PATH")):
+            helpers.set_dependencies_installed(True)
 
-    try:
-        helpers.are_dependencies_installed()
+            for cls in classes:
+                bpy.utils.register_class(cls)
 
-    except ModuleNotFoundError:
-        return  # Don't register other panels, operators etc.
-
-    else:  # If modules successfully registered:
-        for cls in classes:
-            bpy.utils.register_class(cls)
-
-        bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
+            bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
 
     print(f"DEPENDENCIES INSTALLED = {dependencies_installed}")
 

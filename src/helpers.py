@@ -109,6 +109,7 @@ def execution_handler(venv_path: str, operation_function: str, user_input: dict)
                 "OS not supported. Cozy Auto Texture only support Darwin, Linux, and Windows operating systems."
         )
 
+
 # Dependency handling:
 
 def set_dependencies_installed(are_installed):
@@ -116,47 +117,46 @@ def set_dependencies_installed(are_installed):
     dependencies_installed = are_installed
 
 
-def are_dependencies_installed():
-    # If dependency in 'dependencies' is not installed in Venv (if 'make_global') or not installed in Blender.
-    does_venv_exist = os.path.exists(venv_path)
-    modules_installed = True
-
-    if does_venv_exist:
-
-        for dependency in dependencies:
-            module_name = dependency.module_name
-            extra_params = dependency.extra_params
-
-            if "make_global" not in extra_params:  # If module designated installation is Venv
-                user_input = {
-                        "module_name": module_name
-                }
-
-                # TODO: Output of 'execution_handler' needs to be verified that it outputs bool of check_imports()
-                #  return
-                # *Should work with new 'output = subprocess.check_output()' method
-                modules_installed = execution_handler(
-                        venv_path=venv_path,
-                        operation_function="check_imports",
-                        user_input=user_input
-                )
-
-            else:  # If module designated installation is Blender
-                installed_modules = {pkg.key for pkg in pkg_resources.working_set}
-
-                if module_name not in installed_modules:
-                    modules_installed = False
-
-            if not modules_installed:
-                set_dependencies_installed(False)
-                return False
-
-    if not os.path.exists(sd_path):
-        set_dependencies_installed(False)
-        return False
-
-    set_dependencies_installed(True)
-    return modules_installed
+# def are_dependencies_installed():
+#     # If dependency in 'dependencies' is not installed in Venv (if 'make_global') or not installed in Blender.
+#     does_venv_exist = os.path.exists(venv_path)
+#     modules_installed = True
+#
+#     if does_venv_exist:
+#         for dependency in dependencies:
+#             module_name = dependency.module_name
+#             extra_params = dependency.extra_params
+#
+#             if "make_global" not in extra_params:  # If module designated installation is Venv
+#                 user_input = {
+#                         "module_name": module_name
+#                 }
+#
+#                 # TODO: Output of 'execution_handler' needs to be verified that it outputs bool of check_imports()
+#                 #  return
+#                 # *Should work with new 'output = subprocess.check_output()' method
+#                 modules_installed = execution_handler(
+#                         venv_path=venv_path,
+#                         operation_function="check_imports",
+#                         user_input=user_input
+#                 )
+#
+#             else:  # If module designated installation is Blender
+#                 installed_modules = {pkg.key for pkg in pkg_resources.working_set}
+#
+#                 if module_name not in installed_modules:
+#                     modules_installed = False
+#
+#             if not modules_installed:
+#                 set_dependencies_installed(False)
+#                 return False
+#
+#     if not os.path.exists(sd_path):
+#         set_dependencies_installed(False)
+#         return False
+#
+#     set_dependencies_installed(True)
+#     return modules_installed
 
 
 def install_pip():
@@ -195,7 +195,7 @@ def import_module(module_name):
         globals()[module_name] = importlib.import_module(module_name)
 
 
-def install_and_import_module():
+def install_and_import_module(venv_path: str, ):
     """
     Installs the package through pip and will attempt to import modules into the Venv, or if make_global = True import
     them globally.
