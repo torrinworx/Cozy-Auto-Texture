@@ -27,17 +27,18 @@ dependence_dict = {
         "diffusers": [],
         "transformers": [],
         "torch==1.12.1+cu116": ["-f", "https://download.pytorch.org/whl/torch_stable.html"],
-        "Pillow": ["make_global"]
+
+        # Test code for global imports:
+        # "Pillow": ["make_global"]  # Note: User is required to start Blender with Admin privileges to install global
 }
 
 Dependency = namedtuple("Dependency", ["module", "name", "extra_params"])
 dependencies = [Dependency(module=i, name=None, extra_params=j) for i, j in dependence_dict.items()]
-print(dependencies)
 dependencies_installed = False
 
 # Current size of final Environment folder including weights and dependencies in bytes:
 # TODO: Make this number dynamic based on the total "Cozy-Auto-Texture-Files" folder size.
-env_size = 7e+9  # 7GB
+env_size = 10e+9  # 10GB
 buffer = 1e+9  # 1GB
 
 # Current Drive:
@@ -256,7 +257,7 @@ def install_and_import_module(venv_path: str, ):
                     check=True,
             )
 
-        if make_global:
+        if make_global:  # Doesn't work for some reason: No module named "Pillow"
             print(f"\nInstalling {module_name} to {sys.executable}.\n")
             install_commands_list[0] = sys.executable
             subprocess.run(
@@ -269,12 +270,12 @@ def install_and_import_module(venv_path: str, ):
             import_module(module_name)
 
     # Test global installation worked:
-    try:
-        import PIL
-        print(f"{PIL.__version__}")
-        print("SUCCESSFULLY IMPORTED PIL GLOBALLY")
-    except ImportError as err:
-        print(f"ERROR IMPORTING PIL:\n{err}")
+    # try:
+    #     import PIL
+    #     print(f"{PIL.__version__}")
+    #     print("SUCCESSFULLY IMPORTED PIL GLOBALLY")
+    # except ImportError as err:
+    #     print(f"ERROR IMPORTING PIL:\n{err}")
 
 
 # Other:

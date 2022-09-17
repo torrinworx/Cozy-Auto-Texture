@@ -6,7 +6,6 @@ import requests
 import pkg_resources
 from torch import autocast
 from diffusers import StableDiffusionPipeline
-from .helpers import uniquify
 
 
 # ======== Command Line ======== #
@@ -35,6 +34,7 @@ class SDInterfaceCommands(object):
                     sys.stdout.write("\r[%s%s]" % ('=' * done, ' ' * (50 - done)))
                     sys.stdout.flush()
 
+        # TODO: Add unzipping progress bar
         # Unzip file
         unzipped_path = os.path.join(environment_path, zipfile.ZipFile(zip_path).namelist()[0])
 
@@ -60,6 +60,7 @@ class SDInterfaceCommands(object):
         Main function to control Blender/Stable Diffusion text to image bridge.
         :return:
         """
+        from .helpers import uniquify
 
         pipe = StableDiffusionPipeline.from_pretrained(model_path)  # Specify model path
         pipe = pipe.to(device)  # Specify render device

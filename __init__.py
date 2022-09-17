@@ -18,7 +18,6 @@ LAST_UPDATED = "11:40PM, Sept 13rd, 2022"
 
 # Blender modules:
 import bpy
-from bpy.props import (IntProperty, BoolProperty, CollectionProperty)
 
 
 # Python modules:
@@ -262,6 +261,13 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
         venv_path = os.path.join(environment_path, "venv")
         sd_path = os.path.join(environment_path, helpers.sd_version)
 
+
+        os.environ['CAT_ENVIRONMENT_PATH'] = environment_path
+        if 'CAT_ENVIRONMENT_PATH' in os.environ:
+            print(f"CAT_ENVIRONMENT_PATH DETECTED={os.getenv('CAT_ENVIRONMENT_PATH')}")
+        else:
+            print("CAT_ENVIRONMENT_PATH NOT DETECTED")
+
         # Install pip:
         helpers.install_pip()
 
@@ -276,7 +282,7 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
         try:
             helpers.install_and_import_module(venv_path=venv_path)
 
-            print("Dependencies installed successfully.")
+            print("Python modules installed successfully.")
         except (subprocess.CalledProcessError, ImportError) as err:
             self.report({"ERROR"}, str(err))
             return {"CANCELLED"}
@@ -300,7 +306,7 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
             self.report({"ERROR"}, str(err))
             return {"CANCELLED"}
 
-        os.environ['CAT_ENVIRONMENT_PATH'] = environment_path
+        print("Dependencies installed successfully")
 
         helpers.set_dependencies_installed(True)
 
@@ -440,8 +446,8 @@ def register():
 
     bpy.types.Scene.input_tool_pre = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties_Pre)
 
-    if os.environ["CAT_ENVIRONMENT_PATH"] is not None:
-        environment_path = os.environ["CAT_ENVIRONMENT_PATH"]
+    if "CAT_ENVIRONMENT_PATH" in os.environ:
+        environment_path = os.getenv("CAT_ENVIRONMENT_PATH")
         if os.path.exists(environment_path):
             helpers.set_dependencies_installed(True)
 
