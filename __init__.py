@@ -253,10 +253,10 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
                         "Cozy-Auto-Texture-Files"
                 )
         )
-
         return not environment_path
 
-    async def install_dependencies(self, context):
+    def execute(self, context):
+        # TODO: make asynchronous so that download progress is viewable from UI.
         # Paths:
         environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
         venv_path = os.path.join(environment_path, "venv")
@@ -309,8 +309,6 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
 
         bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
 
-    def execute(self, context):
-        async_task = asyncio.ensure_future(self.install_dependencies(context))
         return {'FINISHED'}
 
 
@@ -322,8 +320,14 @@ class CATPRE_PT_warning_panel(bpy.types.Panel):
     bl_region_type = "UI"
 
     @classmethod
-    def poll(self, context):
-        return not dependencies_installed
+    def poll(cls, context):
+        environment_path = os.path.exists(
+            os.path.join(
+                bpy.context.scene.input_tool_pre.venv_path,
+                "Cozy-Auto-Texture-Files"
+            )
+        )
+        return not environment_path
 
     def draw(self, context):
         layout = self.layout
@@ -436,10 +440,9 @@ def register():
 
     bpy.types.Scene.input_tool_pre = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties_Pre)
 
-    environment_path = os.environ.get("CAT_ENVIRONMENT_PATH")
-    print(f"ENVIRONEMNT_PATH ==== {environment_path}")
-    if environment_path is not None:
-        if os.path.exists(os.getenv("CAT_ENVIRONMENT_PATH")):
+    if os.environ["CAT_ENVIRONMENT_PATH"] is not None:
+        environment_path = os.environ["CAT_ENVIRONMENT_PATH"]
+        if os.path.exists(environment_path):
             helpers.set_dependencies_installed(True)
 
             for cls in classes:
@@ -447,7 +450,12 @@ def register():
 
             bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
 
-    print(f"DEPENDENCIES INSTALLED = {dependencies_installed}")
+            helpers.set_dependencies_installed(True)
+            return
+
+        helpers.set_dependencies_installed(False)
+        return
+
 
 
 def unregister():
@@ -457,9 +465,9 @@ def unregister():
     if dependencies_installed:
         for cls in reversed(classes):
             bpy.utils.unregister_class(cls)
-    #     del bpy.types.Scene.input_tool
-    #
-    # del bpy.types.Scene.input_tool_pre
+        del bpy.types.Scene.input_tool
+
+    del bpy.types.Scene.input_tool_pre
 
 
 if __name__ == '__main__':

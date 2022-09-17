@@ -7,7 +7,6 @@ import pathlib
 import platform
 import importlib
 import subprocess
-import pkg_resources
 from collections import namedtuple
 
 # ======== Variables ======== #
@@ -33,6 +32,7 @@ dependence_dict = {
 
 Dependency = namedtuple("Dependency", ["module", "name", "extra_params"])
 dependencies = [Dependency(module=i, name=None, extra_params=j) for i, j in dependence_dict.items()]
+print(dependencies)
 dependencies_installed = False
 
 # Current size of final Environment folder including weights and dependencies in bytes:
@@ -217,7 +217,7 @@ def install_and_import_module(venv_path: str, ):
     print(f"Installing dependencies: {''.join([i.module for i in dependencies])}")
 
     for dependency in dependencies:
-        module_name = dependency.module_name
+        module_name = dependency.module
         extra_params = dependency.extra_params
         make_global = False
 
