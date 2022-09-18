@@ -18,194 +18,31 @@ LAST_UPDATED = "11:40PM, Sept 13rd, 2022"
 
 # Blender modules:
 import bpy
-from bpy.props import (IntProperty, BoolProperty, CollectionProperty)
 
 
 # Python modules:
 import os
 import sys
-import shutil
-import pathlib
-import platform
+import asyncio
 import tempfile
 import importlib
 import subprocess
-from collections import namedtuple
 
 
 # Local modules:
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
-from .src import execution_handler
+from .src import helpers
 
 # Refresh Locals for development:
 if "bpy" in locals():
     modules = {
-        "execution_handler": execution_handler,
+        "helpers": helpers,
     }
 
     for i in modules:
         if i in locals():
             importlib.reload(modules[i])
-
-# ======== Variables ======== #
-# SD Version:
-sd_version = "stable-diffusion-v1-4"
-
-# Stable Diffusion weights URL:
-sd_url = f"https://cozy-auto-texture-sd-repo.s3.us-east-2.amazonaws.com/{sd_version}.zip"
-
-# Paths:
-current_drive = os.path.join(pathlib.Path.home().drive, os.sep)
-
-environment_path = os.path.join(current_drive, "Cozy-Auto-Texture-Files")
-venv_path = os.path.join(environment_path, "venv")
-sd_path = os.path.join(environment_path, sd_version)
-
-# Dependencies
-
-# Declare all modules that this add-on depends on, that may need to be installed. The package and (global) name can be
-# set to None, if they are equal to the module name. See import_module and ensure_and_import_module for the explanation
-# of the arguments. DO NOT use this to import other parts of this Python add-on, see "Local modules" above for examples.
-
-dependence_list = [
-        "fire",
-        "numpy",
-        "diffusers",
-        "transformers",
-        "torch==1.12.1+cu116",
-]
-
-Dependency = namedtuple("Dependency", ["module", "package", "name"])
-dependencies = [Dependency(module=i, package=None, name=None) for i in dependence_list]
-dependencies_installed = False
-
-# Current size of final Environment folder including weights and dependencies:
-# TODO: Make this number dynamic based on the total "Cozy-Auto-Texture-Files" folder size.
-env_size = 7e+9  # 7GB
-buffer = 1e+9  # 1GB
-
-
-# ======== Helper functions ======== #
-
-
-def check_drive_space(path: str = os.getcwd()):
-    """
-    Checks current drive if it has enough available space to store the Environment and Stable Diffusion weights.
-
-    returns True if enough space exists in drive, and False if installs will go over drive space.
-    """
-
-    total, used, free = shutil.disk_usage(path)
-
-    if free > (env_size + buffer):
-        return True
-    else:
-        return False
-
-
-def import_module(module_name, global_name=None):
-    """
-    Import a module.
-    :param module_name: Module to import.
-    :param global_name: (Optional) Name under which the module is imported. If None the module_name will be used.
-       This allows to import under a different name with the same effect as e.g. "import numpy as np" where "np" is
-       the global_name under which the module can be accessed.
-    :raises: ImportError and ModuleNotFoundError
-    """
-    if global_name is None:
-        global_name = module_name
-
-    if global_name in globals():
-        importlib.reload(globals()[global_name])
-    else:
-        # Attempt to import the module and assign it to globals dictionary. This allow to access the module under
-        # the given name, just like the regular import would.
-        globals()[global_name] = importlib.import_module(module_name)
-
-
-def install_pip():
-    """
-    Installs pip if not already present. Please note that ensurepip.bootstrap() also calls pip, which adds the
-    environment variable PIP_REQ_TRACKER. After ensurepip.bootstrap() finishes execution, the directory doesn't exist
-    anymore. However, when subprocess is used to call pip, in order to install a package, the environment variables
-    still contain PIP_REQ_TRACKER with the now nonexistent path. This is a problem since pip checks if PIP_REQ_TRACKER
-    is set and if it is, attempts to use it as temp directory. This would result in an error because the
-    directory can't be found. Therefore, PIP_REQ_TRACKER needs to be removed from environment variables.
-    :return:
-    """
-
-    try:
-        # Check if pip is already installed
-        subprocess.run([sys.executable, "-m", "pip", "--version"], check=True)
-    except subprocess.CalledProcessError:
-        import ensurepip
-
-        ensurepip.bootstrap()
-        os.environ.pop("PIP_REQ_TRACKER", None)
-
-
-def install_and_import_module(module_name, package_name=None, global_name=None):
-    """
-    Installs the package through pip and attempts to import the installed module.
-    :param module_name: Module to import.
-    :param package_name: (Optional) Name of the package that needs to be installed. If None it is assumed to be equal
-       to the module_name.
-    :param global_name: (Optional) Name under which the module is imported. If None the module_name will be used.
-       This allows to import under a different name with the same effect as e.g. "import numpy as np" where "np" is
-       the global_name under which the module can be accessed.
-    :raises: subprocess.CalledProcessError and ImportError
-    """
-    if package_name is None:
-        package_name = module_name
-
-    if global_name is None:
-        global_name = module_name
-
-    # Blender disables the loading of user site-packages by default. However, pip will still check them to determine
-    # if a dependency is already installed. This can cause problems if the packages is installed in the user
-    # site-packages and pip deems the requirement satisfied, but Blender cannot import the package from the user
-    # site-packages. Hence, the environment variable PYTHONNOUSERSITE is set to disallow pip from checking the user
-    # site-packages. If the package is not already installed for Blender's Python interpreter, it will then try to.
-    # The paths used by pip can be checked with `subprocess.run([bpy.app.binary_path_python, "-m", "site"], check=True)`
-
-    # Create a copy of the environment variables and modify them for the subprocess call
-    
-    # TODO:cloudpathlib needs this special command: $ pip install cloudpathlib[s3]
-    #  since they provide multiple cloud storage requests, in this case we can specify just s3 to save on download speed
-    environ_copy = dict(os.environ)
-    environ_copy["PYTHONNOUSERSITE"] = "1"
-
-    # TODO: Make this section compatible with Darwin and Linux, "Scripts" should be replaced with "bin"
-    print(f"IMPORTING MODULE: {module_name.upper()}")
-    if package_name == "torch==1.12.1+cu116":
-        subprocess.run(
-                [
-                        os.path.join(venv_path, "Scripts", "python"),
-                        "-m",
-                        "pip",
-                        "install",
-                        package_name,
-                        "-f",
-                        "https://download.pytorch.org/whl/torch_stable.html",
-                ],
-                check=True,
-                # env=environ_copy
-        )
-    else:
-        subprocess.run(
-                [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", package_name],
-                check=True,
-                # env=environ_copy
-        )
-        subprocess.run(
-                [os.path.join(venv_path, "Scripts", "python"), "-m", "pip", "install", "--upgrade", package_name],
-                check=True,
-                # env=environ_copy
-        )
-
-    # The installation succeeded, attempt to import the module again
-    # import_module(module_name, global_name)
 
 
 # ======== User input Property Group ======== #
@@ -250,7 +87,7 @@ class CAT_PGT_Input_Properties_Pre(bpy.types.PropertyGroup):
             description="The save path for the needed modules and the Stable Diffusion weights. If you have already "
                         "installed Cozy Auto Texture, or you are using a different version of Blender, you can use your"
                         " old Environment Path. Regardless of the method, always initiate your Environment.",
-            default=f"{environment_path}",
+            default=f"{helpers.current_drive}",
             maxlen=1024,
             subtype="DIR_PATH"
     )
@@ -268,11 +105,14 @@ class CreateTextures(bpy.types.Operator):
     bl_description = 'Creates textures with Stable Diffusion by using the Texture Description as text input.'
     bl_options = {"REGISTER", "UNDO"}
 
-    reverse_order: BoolProperty(
-        default=False,
-        name="Reverse Order")
+    def invoke(self, context, event):
+        return context.window_manager.invoke_confirm(self, event)
 
     def execute(self, context):
+        environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
+        venv_path = os.path.join(environment_path, "venv")
+        sd_path = os.path.join(environment_path, helpers.sd_version)
+
         subprocess.run(["pip", "-V"], check=True)
 
         user_input = {
@@ -290,13 +130,10 @@ class CreateTextures(bpy.types.Operator):
             user_input["save_path"] = tempfile.gettempdir()
 
         # "text2img" - name of function inside sd_interface.py file
-        execution_handler.modify_execute_bat(venv_path=venv_path, operation_function="text2img", user_input=user_input)
+        helpers.execution_handler(venv_path=venv_path, operation_function="text2img", user_input=user_input)
 
         self.report({'INFO'}, f"Texture(s) Created!")
         return {"FINISHED"}
-
-    def invoke(self, context, event):
-        return context.window_manager.invoke_confirm(self, event)
 
 
 # ======== UI Panels ======== #
@@ -405,67 +242,72 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
     bl_options = {"REGISTER", "INTERNAL"}
 
     @classmethod
-    def poll(self, context):
-        # Deactivate when dependencies have been installed
-        return not dependencies_installed
+    def poll(cls, context):
+        environment_path = os.path.exists(
+                os.path.join(
+                        bpy.context.scene.input_tool_pre.venv_path,
+                        "Cozy-Auto-Texture-Files"
+                )
+        )
+        return not environment_path
 
     def execute(self, context):
-        global environment_path
-        global venv_path
-        global sd_path
+        # TODO: make asynchronous so that download progress is viewable from UI.
+        # Paths:
+        environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
+        venv_path = os.path.join(environment_path, "venv")
+        sd_path = os.path.join(environment_path, helpers.sd_version)
 
-        if environment_path != bpy.context.scene.input_tool_pre.venv_path:
-            environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
-            venv_path = os.path.join(environment_path, "venv")
-            sd_path = os.path.join(environment_path, "stable-diffusion-v1-4")
+        helpers.create_path_log(path=environment_path, path_name="environment_path")
 
-        # Import PIP:
-        install_pip()
+        # Install pip:
+        helpers.install_pip()
 
         # Install Venv:
         if not os.path.exists(venv_path):
             subprocess.run([sys.executable, "-m", "venv", venv_path], check=True)
+        else:
+            pass
+            # TODO: Upgrade Venv if venv already detected.
 
         # Importing dependencies
         try:
-            print(f"DEPENDENCIES: {[i.module for i in dependencies]}")
-            for dependency in dependencies:
-                install_and_import_module(module_name=dependency.module,
-                                          package_name=dependency.package,
-                                          global_name=dependency.name)
-            print("Dependencies installed successfully.")
+            helpers.install_and_import_module(venv_path=venv_path)
+
+            print("Python modules installed successfully.")
         except (subprocess.CalledProcessError, ImportError) as err:
             self.report({"ERROR"}, str(err))
             return {"CANCELLED"}
 
+        # Importing Stable Diffusion
         user_input = {
                 "sd_path": sd_path,
-                "sd_url": sd_url,
+                "sd_url": helpers.sd_url,
                 "environment_path": environment_path,
         }
 
-        # Importing Stable Diffusion
         try:
-            execution_handler.modify_execute_bat(
+            helpers.execution_handler(
                     venv_path=venv_path,
                     operation_function="import_stable_diffusion",
                     user_input=user_input
             )
-            self.report({"INFO"}, "Successfully downloaded Stable Diffusion model!")
+            print("Stable Diffusion successfully installed.")
+
         except Exception as err:
             self.report({"ERROR"}, str(err))
             return {"CANCELLED"}
 
-        global dependencies_installed
-        dependencies_installed = True
+        print("Dependencies installed successfully")
 
-        # Register the panels, operators, etc. since dependencies are installed
+        helpers.set_dependencies_installed(True)
+
         for cls in classes:
             bpy.utils.register_class(cls)
 
         bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
 
-        return {"FINISHED"}
+        return {'FINISHED'}
 
 
 # ======== Pre-Dependency UI Panels ======== #
@@ -476,20 +318,28 @@ class CATPRE_PT_warning_panel(bpy.types.Panel):
     bl_region_type = "UI"
 
     @classmethod
-    def poll(self, context):
-        return not dependencies_installed
+    def poll(cls, context):
+        environment_path = os.path.exists(
+            os.path.join(
+                bpy.context.scene.input_tool_pre.venv_path,
+                "Cozy-Auto-Texture-Files"
+            )
+        )
+        return not environment_path
 
     def draw(self, context):
         layout = self.layout
 
-        lines = [f"Please install the missing dependencies for the \"{bl_info.get('name')}\" add-on.",
-                 f"1. Open Edit > Preferences > Add-ons.",
-                 f"2. Search for the \"{bl_info.get('name')}\" add-on.",
-                 f"4. Under \"Preferences\" click on the \"{CATPRE_OT_install_dependencies.bl_label}\"",
-                 f"   button. This will download and install the missing Python packages,",
-                 f"   if Blender has the required permissions. If you are experiencing issues,",
-                 f"   re-open Blender with Administrator privileges."
+        lines = [
+                f"Please install the missing dependencies for the \"{bl_info.get('name')}\" add-on.",
+                f"1. Open Edit > Preferences > Add-ons.",
+                f"2. Search for the \"{bl_info.get('name')}\" add-on.",
+                f"4. Under \"Preferences\" click on the \"{CATPRE_OT_install_dependencies.bl_label}\"",
+                f"   button. This will download and install the missing Python packages,",
+                f"   if Blender has the required permissions. If you are experiencing issues,",
+                f"   re-open Blender with Administrator privileges."
         ]
+
         for line in lines:
             layout.label(text=line)
 
@@ -510,7 +360,7 @@ class CATPRE_preferences(bpy.types.AddonPreferences):
         # This line represents the character space readable in Blender's UI system:
         #         |=======================================================================|
         lines = [
-                f"Please read the two following License Agreement. You must accept the terms ",
+                f"Please read the two following License Agreements. You must accept the terms ",
                 f"of the License Agreement before continuing with the installation.",
         ]
 
@@ -575,6 +425,11 @@ pre_dependency_classes = (
 
 
 def register():
+    # TODO:
+    #  1. Detect if dependencies are already installed when restarting add-on
+    #  2. Detect if dependencies are installed when fresh installing add-on on different Blender version for example
+    #  Possible solution use environ variables: os.environ['variable_name'] = 'variable_value'
+
     global dependencies_installed
     dependencies_installed = False
 
@@ -583,18 +438,21 @@ def register():
 
     bpy.types.Scene.input_tool_pre = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties_Pre)
 
-    try:
-        for dependency in dependencies:
-            import_module(module_name=dependency.module, global_name=dependency.name)
-        dependencies_installed = True
-    except ModuleNotFoundError:
-        return  # Don't register other panels, operators etc.
+    if helpers.read_path_log(check_exists=True):
+        # environment_path = helpers.read_path_log()["environment_path"]
 
-    else:  # If modules successfully registered:
+        helpers.set_dependencies_installed(True)
+
         for cls in classes:
             bpy.utils.register_class(cls)
 
         bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
+
+        helpers.set_dependencies_installed(True)
+        return
+
+    helpers.set_dependencies_installed(False)
+    return
 
 
 def unregister():
@@ -604,9 +462,9 @@ def unregister():
     if dependencies_installed:
         for cls in reversed(classes):
             bpy.utils.unregister_class(cls)
+        del bpy.types.Scene.input_tool
 
     del bpy.types.Scene.input_tool_pre
-    del bpy.types.Scene.input_tool
 
 
 if __name__ == '__main__':

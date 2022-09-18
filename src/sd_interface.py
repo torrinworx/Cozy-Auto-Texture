@@ -3,11 +3,10 @@ import sys
 import fire
 import zipfile
 import requests
+import pkg_resources
 from torch import autocast
 from diffusers import StableDiffusionPipeline
 
-
-# ======== Helper functions ======== #
 
 def uniquify(path):
     """
@@ -52,6 +51,7 @@ class SDInterfaceCommands(object):
                     sys.stdout.write("\r[%s%s]" % ('=' * done, ' ' * (50 - done)))
                     sys.stdout.flush()
 
+        # TODO: Add unzipping progress bar
         # Unzip file
         unzipped_path = os.path.join(environment_path, zipfile.ZipFile(zip_path).namelist()[0])
 
@@ -88,6 +88,15 @@ class SDInterfaceCommands(object):
         image.save(image_path)
 
         return image_path
+
+    def check_imports(self, module_name: str):
+        installed_modules = {pkg.key for pkg in pkg_resources.working_set}
+        installed = False
+
+        if module_name in installed_modules:
+            installed = True
+
+        return installed
 
 
 if __name__ == '__main__':
