@@ -70,14 +70,7 @@ def execution_handler(venv_path: str, operation_function: str, user_input: dict,
     python_exe_path = os.path.join(venv_path, 'Scripts', 'python.exe')
     drive = pathlib.Path(activate_bat_path).drive
 
-    sd_interface_path = os.path.join(
-            bpy.utils.resource_path("LOCAL"),
-            "scripts",
-            "addons",
-            "Cozy-Auto-Texture",
-            "src",
-            "sd_interface.py"
-    )
+    sd_interface_path = os.path.join(directory, "sd_interface.py")
 
     # Get args from user_input:
     args_string = " "
