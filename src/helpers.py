@@ -2,6 +2,7 @@ import bpy
 
 import os
 import sys
+import json
 import shutil
 import pathlib
 import platform
@@ -43,6 +44,11 @@ buffer = 1e+9  # 1GB
 
 # Current Drive:
 current_drive = os.path.join(pathlib.Path.home().drive, os.sep)
+
+# Previous Environment path log:
+
+directory = os.path.dirname(os.path.realpath(__file__))
+path_log = os.path.join(directory, "..", "path_log.json")
 
 
 # ======== Helper functions ======== #
@@ -310,3 +316,24 @@ def uniquify(path):
         counter += 1
 
     return path
+
+
+def read_path_log(check_exists: bool=False):
+    if check_exists:
+        if os.path.exists(path_log) and os.path.isfile(path_log):
+            return True
+        else:
+            return False
+    if not check_exists:
+        if os.path.exists(path_log) and os.path.isfile(path_log):
+            return json.load(open(path_log))
+
+
+def create_path_log(path: str, path_name=str):
+    print(f"\n{path_log}\n")
+    json_data = json.dumps({path_name: path}, indent=1, ensure_ascii=True)
+
+    with open(path_log, 'w') as outfile:
+        outfile.write(json_data + '\n')
+
+    return path_log

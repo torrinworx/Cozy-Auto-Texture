@@ -261,12 +261,7 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
         venv_path = os.path.join(environment_path, "venv")
         sd_path = os.path.join(environment_path, helpers.sd_version)
 
-
-        os.environ['CAT_ENVIRONMENT_PATH'] = environment_path
-        if 'CAT_ENVIRONMENT_PATH' in os.environ:
-            print(f"CAT_ENVIRONMENT_PATH DETECTED={os.getenv('CAT_ENVIRONMENT_PATH')}")
-        else:
-            print("CAT_ENVIRONMENT_PATH NOT DETECTED")
+        helpers.create_path_log(path=environment_path, path_name="environment_path")
 
         # Install pip:
         helpers.install_pip()
@@ -446,22 +441,21 @@ def register():
 
     bpy.types.Scene.input_tool_pre = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties_Pre)
 
-    if "CAT_ENVIRONMENT_PATH" in os.environ:
-        environment_path = os.getenv("CAT_ENVIRONMENT_PATH")
-        if os.path.exists(environment_path):
-            helpers.set_dependencies_installed(True)
+    if helpers.read_path_log(check_exists=True):
+        # environment_path = helpers.read_path_log()["environment_path"]
 
-            for cls in classes:
-                bpy.utils.register_class(cls)
+        helpers.set_dependencies_installed(True)
 
-            bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
+        for cls in classes:
+            bpy.utils.register_class(cls)
 
-            helpers.set_dependencies_installed(True)
-            return
+        bpy.types.Scene.input_tool = bpy.props.PointerProperty(type=CAT_PGT_Input_Properties)
 
-        helpers.set_dependencies_installed(False)
+        helpers.set_dependencies_installed(True)
         return
 
+    helpers.set_dependencies_installed(False)
+    return
 
 
 def unregister():

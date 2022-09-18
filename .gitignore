@@ -136,3 +136,5 @@ dmypy.json
 
 # stable-diffusion-v1-4
 stable-diffusion-v1-4/
+
+path_log.json
