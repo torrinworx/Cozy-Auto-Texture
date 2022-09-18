@@ -55,7 +55,7 @@ path_log = os.path.join(directory, "..", "path_log.json")
 
 # Venv execution handler:
 
-def execution_handler(venv_path: str, operation_function: str, user_input: dict):
+def execution_handler(venv_path: str, operation_function: str, user_input: dict, output: bool = True):
     """
     In order for the Venv to work inside Blender, we must run the script as the Venv is activated
     inside the actual 'activate.bat' file that Venv generates. This means that for each interaction with Stable Diffusion
@@ -102,15 +102,26 @@ def execution_handler(venv_path: str, operation_function: str, user_input: dict)
 
     # Run activate.bat, activate Venv:
     if platform.system() == "Windows":
-        output = subprocess.check_output(
-                activate_bat_path,
-        )
-        return output
+
+        if output:
+            output = subprocess.check_output(
+                    activate_bat_path,
+            )
+            return output
+        if not output:
+            subprocess.run(
+                    activate_bat_path,
+            )
     elif platform.system() in ["Darwin", "Linux"]:
-        output = subprocess.check_output(
-                args=["source", os.path.join(venv_path, "bin", "activate")],
-        )
-        return output
+        if output:
+            output = subprocess.check_output(
+                    args=["source", os.path.join(venv_path, "bin", "activate")],
+            )
+            return output
+        if not output:
+            subprocess.run(
+                    args=["source", os.path.join(venv_path, "bin", "activate")],
+            )
     else:
         raise OSError(
                 "OS not supported. Cozy Auto Texture only support Darwin, Linux, and Windows operating systems."
@@ -299,23 +310,6 @@ def check_drive_space(path: str = os.getcwd()):
         return True
     else:
         return False
-
-
-def uniquify(path):
-    """
-    Creates unique paths and increments file names to avoid overwriting images. Checks if paths exist, if it does,
-    increments file name with a given number to ensure it doesn't get overwritten.
-    :param path:
-    :return:
-    """
-    filename, extension = os.path.splitext(path)
-    counter = 1
-
-    while os.path.exists(path):
-        path = filename + " (" + str(counter) + ")" + extension
-        counter += 1
-
-    return path
 
 
 def read_path_log(check_exists: bool=False):

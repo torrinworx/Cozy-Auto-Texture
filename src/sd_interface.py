@@ -8,6 +8,23 @@ from torch import autocast
 from diffusers import StableDiffusionPipeline
 
 
+def uniquify(path):
+    """
+    Creates unique paths and increments file names to avoid overwriting images. Checks if paths exist, if it does,
+    increments file name with a given number to ensure it doesn't get overwritten.
+    :param path:
+    :return:
+    """
+    filename, extension = os.path.splitext(path)
+    counter = 1
+
+    while os.path.exists(path):
+        path = filename + " (" + str(counter) + ")" + extension
+        counter += 1
+
+    return path
+
+
 # ======== Command Line ======== #
 class SDInterfaceCommands(object):
     def import_stable_diffusion(self, sd_path: str, sd_url: str, environment_path: str):
@@ -60,7 +77,6 @@ class SDInterfaceCommands(object):
         Main function to control Blender/Stable Diffusion text to image bridge.
         :return:
         """
-        from .helpers import uniquify
 
         pipe = StableDiffusionPipeline.from_pretrained(model_path)  # Specify model path
         pipe = pipe.to(device)  # Specify render device

@@ -108,7 +108,7 @@ class CreateTextures(bpy.types.Operator):
     def invoke(self, context, event):
         return context.window_manager.invoke_confirm(self, event)
 
-    async def sd_interaction(self, context):
+    def execute(self, context):
         environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
         venv_path = os.path.join(environment_path, "venv")
         sd_path = os.path.join(environment_path, helpers.sd_version)
@@ -133,9 +133,6 @@ class CreateTextures(bpy.types.Operator):
         helpers.execution_handler(venv_path=venv_path, operation_function="text2img", user_input=user_input)
 
         self.report({'INFO'}, f"Texture(s) Created!")
-
-    def execute(self, context):
-        async_task = asyncio.ensure_future(self.sd_interaction(context))
         return {"FINISHED"}
 
 
