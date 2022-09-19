@@ -58,12 +58,12 @@ path_log = os.path.join(directory, "..", "path_log.json")
 def execution_handler(venv_path: str, operation_function: str, user_input: dict, output: bool = True):
     """
     In order for the Venv to work inside Blender, we must run the script as the Venv is activated
-    inside the actual 'activate.bat' file that Venv generates. This means that for each interaction with Stable Diffusion
-    we must input the commands into the activate.bat file, then run the file with Subprocess.
+    inside the actual 'activate.bat' file that Venv generates. This means that for each interaction with Stable
+    Diffusion we must input the commands into the activate.bat file, then run the file with Subprocess.
 
     This file controls the interactions with the activate.bat file, it opens, modifies, and runs the files depending on
-    what functions are needed by Cozy Auto Texture. Each main function, when called, will activate Stable Diffusion with the
-    appropriate input variables.
+    what functions are needed by Cozy Auto Texture. Each main function, when called, will activate Stable Diffusion with
+    the appropriate input variables.
     """
 
     activate_bat_path = os.path.join(venv_path, 'Scripts', 'activate.bat')
@@ -128,48 +128,6 @@ def set_dependencies_installed(are_installed):
     dependencies_installed = are_installed
 
 
-# def are_dependencies_installed():
-#     # If dependency in 'dependencies' is not installed in Venv (if 'make_global') or not installed in Blender.
-#     does_venv_exist = os.path.exists(venv_path)
-#     modules_installed = True
-#
-#     if does_venv_exist:
-#         for dependency in dependencies:
-#             module_name = dependency.module_name
-#             extra_params = dependency.extra_params
-#
-#             if "make_global" not in extra_params:  # If module designated installation is Venv
-#                 user_input = {
-#                         "module_name": module_name
-#                 }
-#
-#                 # TODO: Output of 'execution_handler' needs to be verified that it outputs bool of check_imports()
-#                 #  return
-#                 # *Should work with new 'output = subprocess.check_output()' method
-#                 modules_installed = execution_handler(
-#                         venv_path=venv_path,
-#                         operation_function="check_imports",
-#                         user_input=user_input
-#                 )
-#
-#             else:  # If module designated installation is Blender
-#                 installed_modules = {pkg.key for pkg in pkg_resources.working_set}
-#
-#                 if module_name not in installed_modules:
-#                     modules_installed = False
-#
-#             if not modules_installed:
-#                 set_dependencies_installed(False)
-#                 return False
-#
-#     if not os.path.exists(sd_path):
-#         set_dependencies_installed(False)
-#         return False
-#
-#     set_dependencies_installed(True)
-#     return modules_installed
-
-
 def install_pip():
     """
     Installs pip if not already present. Please note that ensurepip.bootstrap() also calls pip, which adds the
@@ -208,19 +166,8 @@ def import_module(module_name):
 
 def install_and_import_module(venv_path: str, ):
     """
-    Installs the package through pip and will attempt to import modules into the Venv, or if make_global = True import
-    them globally.
-    :param import_global: Makes installed modules global if True, will not install imports to Venv. If false, modules
-        will only be installed to the Venv to be used with the Stable Diffusion libraries.
+    Installs the package through pip and will attempt to import modules into the Venv.
     :raises: subprocess.CalledProcessError and ImportError
-
-    Deprecated:
-    module_name: Module to import.
-    package_name: (Optional) Name of the package that needs to be installed. If None it is assumed to be equal
-       to the module_name.
-    global_name: (Optional) Name under which the module is imported. If None the module_name will be used.
-       This allows to import under a different name with the same effect as e.g. "import numpy as np" where "np" is
-       the global_name under which the module can be accessed.
     """
 
     # TODO: Make this section compatible with Darwin and Linux, "Scripts" should be replaced with "bin"
@@ -278,14 +225,6 @@ def install_and_import_module(venv_path: str, ):
 
             # After installation succeeded, attempt to import the module globally:
             import_module(module_name)
-
-    # Test global installation worked:
-    # try:
-    #     import PIL
-    #     print(f"{PIL.__version__}")
-    #     print("SUCCESSFULLY IMPORTED PIL GLOBALLY")
-    # except ImportError as err:
-    #     print(f"ERROR IMPORTING PIL:\n{err}")
 
 
 # Other:
