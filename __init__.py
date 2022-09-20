@@ -32,12 +32,16 @@ import subprocess
 # Local modules:
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
-from .src import helpers
+from .src import \
+    helpers, \
+    async_loop
+
 
 # Refresh Locals for development:
 if "bpy" in locals():
     modules = {
         "helpers": helpers,
+        "async_loop": async_loop,
     }
 
     for i in modules:
@@ -108,7 +112,7 @@ class CreateTextures(bpy.types.Operator):
     def invoke(self, context, event):
         return context.window_manager.invoke_confirm(self, event)
 
-    def execute(self, context):
+    async def create_textures(self, context):
         environment_path = os.path.join(bpy.context.scene.input_tool_pre.venv_path, "Cozy-Auto-Texture-Files")
         venv_path = os.path.join(environment_path, "venv")
         sd_path = os.path.join(environment_path, helpers.sd_version)
@@ -129,10 +133,19 @@ class CreateTextures(bpy.types.Operator):
         if user_input["save_path"] == "/tmp\\":
             user_input["save_path"] = tempfile.gettempdir()
 
-        # "text2img" - name of function inside sd_interface.py file
-        helpers.execution_handler(venv_path=venv_path, operation_function="text2img", user_input=user_input)
+        helpers.execution_handler(
+            venv_path=venv_path,
+            operation_function="text2img",
+            user_input=user_input,
+            output=True,
+        )
 
         self.report({'INFO'}, f"Texture(s) Created!")
+
+    def execute(self, context):
+        async_task = asyncio.ensure_future(self.create_textures(context))
+        # async_task.add_done_callback(done_callback)
+        async_loop.ensure_async_loop()
         return {"FINISHED"}
 
 
@@ -281,16 +294,17 @@ class CATPRE_OT_install_dependencies(bpy.types.Operator):
 
         # Importing Stable Diffusion
         user_input = {
-                "sd_path": sd_path,
-                "sd_url": helpers.sd_url,
-                "environment_path": environment_path,
+            "sd_path": sd_path,
+            "sd_url": helpers.sd_url,
+            "environment_path": environment_path,
         }
 
         try:
             helpers.execution_handler(
-                    venv_path=venv_path,
-                    operation_function="import_stable_diffusion",
-                    user_input=user_input
+                venv_path=venv_path,
+                operation_function="import_stable_diffusion",
+                user_input=user_input,
+                output=True,
             )
             print("Stable Diffusion successfully installed.")
 
@@ -430,6 +444,9 @@ def register():
     #  2. Detect if dependencies are installed when fresh installing add-on on different Blender version for example
     #  Possible solution use environ variables: os.environ['variable_name'] = 'variable_value'
 
+    async_loop.setup_asyncio_executor()
+    bpy.utils.register_class(async_loop.AsyncLoopModalOperator)
+
     global dependencies_installed
     dependencies_installed = False
 
@@ -456,6 +473,8 @@ def register():
 
 
 def unregister():
+    bpy.utils.unregister_class(async_loop.AsyncLoopModalOperator)
+
     for cls in pre_dependency_classes:
         bpy.utils.unregister_class(cls)
 
